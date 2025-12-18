@@ -35,22 +35,53 @@ class UnifiedLLMClient:
             base_url="https://api.groq.com/openai/v1",
         )
 
-    def _log_debug(self, player_name: str, turn: int, prompt: str, response: str):
-        if not self.debug:
-            return
+    def _log_debug(self, player_name: str, turn_number: int, prompt: str, response: str):
+        directory = f"logs"
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+            
+        filename = f"{directory}/{player_name}_history.txt"
         
-        # Log Prompt (Disabled per user request)
-        # with open(f"logs/{player_name}_prompt_{turn}.txt", "w", encoding="utf-8") as f:
-        #     f.write(prompt)
+        # Try to clean up the response for the log
+        log_response = response
+        try:
+            # Re-use simple parse logic to get the dict (simplified here to avoid circular dep with _parse_and_validate logic if we needed it, but logic is self contained)
+            # 1. Strip markdown
+            clean = response.replace("```json", "").replace("```", "").strip()
             
-        # Log Response (Disabled per user request)
-        # with open(f"logs/{player_name}_response_{turn}.txt", "w", encoding="utf-8") as f:
-        #     f.write(response)
+            # 2. Regex find
+            import re, json
+            match = re.search(r"(\{|\[).+(\}|\])", response, re.DOTALL)
             
-        # Append to History
-        separator = "-" * 80
-        with open(f"logs/{player_name}_history.txt", "a", encoding="utf-8") as f:
-            f.write(f"\n--- Turn {turn} ---\nPROMPT:\n{prompt}\n{separator}\n\nRESPONSE:\n{response}\n{separator}\n")
+            data = None
+            try:
+                data = json.loads(clean)
+            except:
+                if match:
+                    data = json.loads(match.group(0))
+
+            if data:
+                # Handle wrappers (CLI list/dict)
+                if isinstance(data, list):
+                    for item in data:
+                        if isinstance(item, dict) and "result" in item and isinstance(item["result"], str):
+                            data = json.loads(item["result"].replace("```json", "").replace("```", "").strip())
+                            break
+                elif isinstance(data, dict) and "result" in data and isinstance(data["result"], str):
+                    data = json.loads(data["result"].replace("```json", "").replace("```", "").strip())
+                
+                # Now data should be the TurnOutput dict
+                if "thought" in data: # Basic check
+                    log_response = (
+                        f"THOUGHT: {data.get('thought')}\n"
+                        f"SPEECH:  {data.get('speech')}\n"
+                        f"VOTE:    {data.get('vote')}"
+                    )
+        except:
+            pass # Keep raw if any parse error during logging
+
+        with open(filename, "a", encoding="utf-8") as f:
+            f.write(f"\n--- Turn {turn_number} ---\nPROMPT:\n{prompt}\n\nRESPONSE:\n{log_response}\n\n" + "-"*80 + "\n")
 
     def _parse_and_validate(self, response_text: str) -> TurnOutput:
         """Attempts to parse JSON from the response and validate against TurnOutput schema."""

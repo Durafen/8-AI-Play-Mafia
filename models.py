@@ -81,7 +81,7 @@ Schema:
         
         if game_state.phase == "Voting":
              prompt += "This is the VOTING phase. You MUST choose someone to hang.\n"
-             prompt += "Provide your speech explaining your vote (max 50 words) and your vote choice.\n"
+             prompt += "Voting is SILENT. Do not speak. Set 'speech' to an empty string. Provide your 'vote' target.\n"
         elif game_state.phase == "Night":
              prompt += "It is NIGHT. You are whispering to your partner. Decide who to kill.\n"
              prompt += "Provide your thought and a target to kill in the 'vote' field.\n"

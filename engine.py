@@ -200,7 +200,7 @@ class GameEngine:
                         if vote_target not in [p.state.name for p in living]:
                             vote_target = "Skip" # Invalid vote
                         
-                        self.log("Voting", player.state.name, "vote", f"Voted for {vote_target} | Reason: {output.speech}", vote_target=vote_target)
+                        self.log("Voting", player.state.name, "vote", f"Voted for {vote_target}", vote_target=vote_target)
                         
                         if vote_target != "Skip":
                             votes[vote_target] = votes.get(vote_target, 0) + 1
