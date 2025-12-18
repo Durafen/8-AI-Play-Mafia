@@ -3,7 +3,7 @@ from schemas import PlayerState, TurnOutput, GameState, LogEntry
 from api_clients import UnifiedLLMClient
 
 class Player:
-    def __init__(self, name: str, role: str, provider: str, model_name: str, client: UnifiedLLMClient):
+    def __init__(self, name: str, role: str, provider: str, model_name: str, client: UnifiedLLMClient, player_index: int):
         self.state = PlayerState(
             name=name,
             role=role,
@@ -11,6 +11,7 @@ class Player:
             model_name=model_name
         )
         self.client = client
+        self.player_index = player_index
         self.partner_name: Optional[str] = None # For mafia to know their partner
 
     def set_partner(self, partner_name: str):
@@ -20,6 +21,7 @@ class Player:
         prompt = f"""You are a player in a game of Mafia.
 Your name is: {self.state.name}
 Your role is: {self.state.role}
+Game Rules: There are 8 players total. 2 are Mafia, 6 are Villagers.
 """
         if self.state.role == "Mafia" and self.partner_name:
             prompt += f"Your Mafia Partner is: {self.partner_name}. You are working TOGETHER to eliminate the town.\n"
@@ -93,8 +95,11 @@ Schema:
         system_prompt = self._build_system_prompt()
         turn_prompt = self._build_turn_prompt(game_state)
         
+        # Pass numbered name for file logging, but models use real name in prompt
+        log_name = f"{self.player_index}_{self.state.name}"
+        
         output = self.client.generate_turn(
-            player_name=self.state.name,
+            player_name=log_name,
             provider=self.state.provider,
             model_name=self.state.model_name,
             system_prompt=system_prompt,
@@ -107,3 +112,4 @@ Schema:
             self.state.previous_thoughts.append(f"Day {turn_number}: {output.thought}")
         
         return output
+

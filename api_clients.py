@@ -48,8 +48,9 @@ class UnifiedLLMClient:
         #     f.write(response)
             
         # Append to History
+        separator = "-" * 80
         with open(f"logs/{player_name}_history.txt", "a", encoding="utf-8") as f:
-            f.write(f"\n--- Turn {turn} ---\nPROMPT:\n{prompt}\n\nRESPONSE:\n{response}\n")
+            f.write(f"\n--- Turn {turn} ---\nPROMPT:\n{prompt}\n{separator}\n\nRESPONSE:\n{response}\n{separator}\n")
 
     def _parse_and_validate(self, response_text: str) -> TurnOutput:
         """Attempts to parse JSON from the response and validate against TurnOutput schema."""

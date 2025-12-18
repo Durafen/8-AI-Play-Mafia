@@ -37,6 +37,17 @@ class GameEngine:
         self.active_players: Dict[str, Player] = {} # Name -> Player obj
 
     def log(self, phase: str, actor: str, action: str, content: str, is_secret: bool = False):
+        # Determine display name with number if actor is a player
+        actor_display = actor
+        player = next((p for p in self.players if p.state.name == actor), None)
+        if player:
+            idx = self.players.index(player) + 1
+            actor_display = f"{idx}. {actor}"
+            
+            # Add Mafia Icon for terminal display only
+            if player.state.role == "Mafia":
+                actor_display = f"👺 {actor_display}"
+
         entry = LogEntry(
             turn=self.state.turn,
             phase=phase,
@@ -44,34 +55,48 @@ class GameEngine:
             action=action,
             content=content
         )
+        
+        # Add Phase Icon
+        phase_icon = ""
+        if phase == "Day": phase_icon = "☀️ "
+        elif phase == "Night": phase_icon = "🌙 "
+        elif phase == "Voting": phase_icon = "🗳️ "
+
         if is_secret:
             self.state.mafia_logs.append(entry)
-            print(f"\n[{phase.upper()}][SECRET] {actor}  {content}")
+            print(f"\n[{phase_icon}{phase.upper()}][SECRET] {actor_display}  {content}")
         else:
             self.state.public_logs.append(entry)
-            # User Request: "One space and the model name, two spaces and then model name" (?)
-            # Interpreted as: "1. Name  Content"
-            # Since 'actor' now contains "1. Name", we just need the "  " separator.
-            print(f"\n[{phase.upper()}] {actor}  {content}")
+            print(f"\n[{phase_icon}{phase.upper()}] {actor_display}  {content}")
 
     def setup_game(self):
         print("Initializing Game...")
-        # Randomize Roles: 2 Mafia, 6 Villagers
+        
+        # 1. Randomize Roster Order
+        roster = list(ROSTER_CONFIG)
+        random.shuffle(roster)
+
+        # 2. Assign Roles (2 Mafia, 6 Villagers)
+        # Since roster is shuffled, we can just pick indices 0 and 1 for Mafia? 
+        # Or shuffle roles separately? 
+        # Let's shuffle indices to be safe/explicit.
         indices = list(range(8))
-        random.shuffle(indices)
-        mafia_indices = set(indices[:2])
+        # random.shuffle(indices) -> actually we just need 2 random indices
+        mafia_indices = set(random.sample(range(8), 2))
 
         mafia_names = []
         
         # Create Players
-        for i, config in enumerate(ROSTER_CONFIG):
+        for i, config in enumerate(roster):
             role = "Mafia" if i in mafia_indices else "Villager"
+            
             p = Player(
                 name=config["name"],
                 role=role,
                 provider=config["provider"],
                 model_name=config["model"],
-                client=self.client
+                client=self.client,
+                player_index=i+1
             )
             self.players.append(p)
             self.state.players.append(p.state)
@@ -128,6 +153,10 @@ class GameEngine:
                 self._wait_for_next()
                 try:
                     output = player.take_turn(self.state, self.state.turn)
+                    # Print Thought to Terminal
+                    prefix = "👺 " if player.state.role == "Mafia" else ""
+                    print(f"\n💭 {prefix}{player.state.name} Thinking: {output.thought}")
+                    
                     self.log("Day", player.state.name, "speak", output.speech)
                 except Exception as e:
                     self.log("Day", player.state.name, "error", f"Failed to speak: {e}")
@@ -143,6 +172,10 @@ class GameEngine:
                     try:
                         output = player.take_turn(self.state, self.state.turn)
                         vote_target = output.vote
+                        
+                        # Print Thought
+                        prefix = "👺 " if player.state.role == "Mafia" else ""
+                        print(f"\n💭 {prefix}{player.state.name} Thinking: {output.thought}")
                         
                         # Validate vote
                         if vote_target not in [p.state.name for p in living]:
@@ -196,6 +229,9 @@ class GameEngine:
                     try:
                         # Mafia player "votes" for kill
                         output = m_player.take_turn(self.state, self.state.turn)
+                        
+                        print(f"\n💭 👺 {m_player.state.name} (Mafia) Thinking: {output.thought}")
+
                         target = output.vote
                         self.log("Night", m_player.state.name, "whisper", f"Suggests killing {target}: {output.speech}", is_secret=True)
                         if target:
