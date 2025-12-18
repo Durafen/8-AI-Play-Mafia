@@ -13,9 +13,11 @@ It supports multiple AI providers including OpenAI, Anthropic, Google Gemini, an
 
 *   **Multi-Model Roster**: Pit different models against each other (e.g., GPT-5.2 vs Claude Sonnet vs Gemini 2.5).
 *   **Dual Modes**: Run using **Local CLI Tools** (free/cheap if using local subscriptions) or via **Direct API Calls**.
-*   **Automated Game Loop**: The engine handles phases (Day, Voting, Night), turn management, and death logic automatically.
+*   **Automated Game Loop**: The engine handles phases (Day, Defense, Voting, Last Words, Night), turn management, and death logic automatically.
+*   **Text-to-Speech**: Each player has a unique voice (Edge TTS) - hear the AI debate and deceive!
 *   **Detailed Logs**: Observe "inner thoughts" of models to understand their strategy and deception.
 *   **Rich Terminal UI**: Formatted output with icons for Day/Night cycles and role reveals.
+*   **Game Persistence**: Game logs saved to `games/` directory with timestamps.
 
 ---
 
@@ -101,12 +103,26 @@ GROQ_API_KEY=gsk_...          # For Llama/Qwen models
 
 > **Note:** In CLI mode, these keys might not be needed if your terminal tools are already logged in (e.g., via `glcloud auth login` or similar).
 
+### 🔊 Text-to-Speech (TTS)
+The game uses **Edge TTS** (free Microsoft neural voices) to give each player a unique voice.
+
+Configure in `engine.py`:
+```python
+TTS_ENABLED = True   # Set to False to disable
+TTS_RATE = "+20%"    # Speech speed: "+20%" faster, "-10%" slower
+```
+
+Each player has a distinct voice accent (American, British, Australian, Indian, Irish, Canadian, South African) defined in `ROSTER_CONFIG`.
+
+**Requirements:** `pip install edge-tts` (auto-installed with requirements.txt)
+
 ### 🤖 Changing Players & Models
 You can customize the game roster in `engine.py`. Look for `ROSTER_CONFIG`.
 Each entry requires:
 - `name`: Display name of the player.
 - `provider`: `openai`, `anthropic`, `google`, or `groq`.
 - `model`: The exact model string (e.g., `gpt-5.2` for CLI or `gpt-4o` for API).
+- `voice`: Edge TTS voice ID (e.g., `en-US-GuyNeural`, `en-GB-RyanNeural`).
 
 **Example:**
 ```python

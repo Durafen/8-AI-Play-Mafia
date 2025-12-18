@@ -3,3 +3,4 @@ openai
 anthropic
 google-genai
 python-dotenv
+edge-tts

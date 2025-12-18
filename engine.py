@@ -5,32 +5,80 @@ from models import Player
 from api_clients import UnifiedLLMClient
 from schemas import GameState, LogEntry, TurnOutput
 
-# Config for Roster
-# Config for Roster
+# TTS Config
+TTS_ENABLED = True   # Set to False to disable text-to-speech
+TTS_RATE = "+20%"    # Speech speed: "+20%" = 20% faster, "-10%" = 10% slower
+
+# Config for Roster (with TTS voices)
 ROSTER_CONFIG = [
     # OPENAI
-    {"name": "GPT 5.2", "provider": "openai", "model": "gpt-5.2"},
-    {"name": "GPT 5.1", "provider": "openai", "model": "gpt-5.1"},
-    
+    {"name": "GPT 5.2", "provider": "openai", "model": "gpt-5.2", "voice": "en-US-GuyNeural"},
+    {"name": "GPT 5.1", "provider": "openai", "model": "gpt-5.1", "voice": "en-US-ChristopherNeural"},
+
     # ANTHROPIC
-    {"name": "Haiku", "provider": "anthropic", "model": "haiku"}, 
-    {"name": "Sonnet", "provider": "anthropic", "model": "sonnet"},
+    {"name": "Haiku", "provider": "anthropic", "model": "haiku", "voice": "en-GB-RyanNeural"},
+    {"name": "Sonnet", "provider": "anthropic", "model": "sonnet", "voice": "en-AU-WilliamNeural"},
 
     # GOOGLE
-    {"name": "Gemini 2.5 Pro", "provider": "google", "model": "gemini-2.5-pro"},
-    {"name": "Gemini 2.5 Flash", "provider": "google", "model": "gemini-2.5-flash"},
-    {"name": "Gemini 3 Flash", "provider": "google", "model": "gemini-3-flash-preview"},
+    {"name": "Gemini 2.5 Pro", "provider": "google", "model": "gemini-2.5-pro", "voice": "en-IN-PrabhatNeural"},
+    {"name": "Gemini 2.5 Flash", "provider": "google", "model": "gemini-2.5-flash", "voice": "en-IE-ConnorNeural"},
+    {"name": "Gemini 3 Flash", "provider": "google", "model": "gemini-3-flash-preview", "voice": "en-CA-LiamNeural"},
 
     # GROQ (Qwen)
-    {"name": "Qwen Coder", "provider": "groq", "model": "coder-model"}, 
+    {"name": "Qwen Coder", "provider": "groq", "model": "coder-model", "voice": "en-ZA-LukeNeural"},
 ]
+
+NARRATOR_VOICE = "en-US-AriaNeural"
 
 import shutil
 import os
+import tempfile
+import subprocess
 from datetime import datetime
 
+try:
+    import edge_tts
+    EDGE_TTS_AVAILABLE = True
+except ImportError:
+    EDGE_TTS_AVAILABLE = False
+
+
+class TTSEngine:
+    """Edge TTS wrapper for voice synthesis"""
+
+    def __init__(self, enabled: bool = True, rate: str = TTS_RATE):
+        self.enabled = enabled and EDGE_TTS_AVAILABLE
+        self.rate = rate
+        self._voice_map = {}  # player_name -> voice_id
+        if enabled and not EDGE_TTS_AVAILABLE:
+            print("[TTS] edge-tts not installed. Run: pip install edge-tts")
+
+    def register_player(self, name: str, voice: str):
+        self._voice_map[name] = voice
+
+    def speak(self, text: str, player_name: str = None, voice: str = None):
+        if not self.enabled or not text or not text.strip():
+            return
+        use_voice = voice or self._voice_map.get(player_name, "en-US-AriaNeural")
+        try:
+            asyncio.run(self._speak_async(text, use_voice))
+        except Exception as e:
+            print(f"[TTS Error] {e}")
+
+    async def _speak_async(self, text: str, voice: str):
+        with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
+            temp_path = f.name
+        try:
+            communicate = edge_tts.Communicate(text, voice, rate=self.rate)
+            await communicate.save(temp_path)
+            subprocess.run(["afplay", temp_path], check=True)  # macOS
+        finally:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+
+
 class GameEngine:
-    def __init__(self):
+    def __init__(self, tts_enabled: bool = TTS_ENABLED):
         # Clean Logs - User requested logs/ be wiped on new game
         if os.path.exists("logs"):
             shutil.rmtree("logs")
@@ -38,19 +86,22 @@ class GameEngine:
 
         # Create persistent games directory
         os.makedirs("games", exist_ok=True)
-        
+
         # Initialize Game Log as a flat file in games/
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         self.game_log_path = os.path.join("games", f"game_{timestamp}.txt")
-        
+
         with open(self.game_log_path, "w", encoding='utf-8') as f:
             f.write(f"=== MAFIA GAME LOG ({timestamp}) ===\n")
-        
+
         # Restore individual player logs in logs/ dir
         self.client = UnifiedLLMClient(debug=True, log_dir="logs")
         self.state = GameState()
         self.players: List[Player] = []
-        self.active_players: Dict[str, Player] = {} # Name -> Player obj
+        self.active_players: Dict[str, Player] = {}  # Name -> Player obj
+
+        # Initialize TTS
+        self.tts = TTSEngine(enabled=tts_enabled)
 
 
 
@@ -61,6 +112,10 @@ class GameEngine:
                 f.write(str(text) + "\n")
         except:
             pass
+
+    def _announce(self, text: str):
+        """Speak system announcement with narrator voice"""
+        self.tts.speak(text, voice=NARRATOR_VOICE)
 
     def log(self, phase: str, actor: str, action: str, content: str, is_secret: bool = False, vote_target: str = None):
         # Determine display name with number if actor is a player
@@ -165,6 +220,10 @@ class GameEngine:
             self.players.append(p)
             self.state.players.append(p.state)
             self.active_players[p.state.name] = p
+
+            # Register TTS voice for player
+            self.tts.register_player(config["name"], config.get("voice", "en-US-AriaNeural"))
+
             if role == "Mafia":
                 mafia_names.append(p.state.name)
 
@@ -188,12 +247,14 @@ class GameEngine:
     def check_game_over(self) -> bool:
         mafia_count = sum(1 for p in self._get_living_players() if p.state.role == "Mafia")
         town_count = sum(1 for p in self._get_living_players() if p.state.role == "Villager")
-        
+
         if mafia_count == 0:
             self._print("\n🎉 TOWN WINS! All Mafia eliminated. 🎉")
+            self._announce("Town wins! All Mafia have been eliminated")
             return True
         if mafia_count >= town_count:
             self._print("\n💀 MAFIA WINS! They have parity with Town. 💀")
+            self._announce("Mafia wins!")
             return True
         return False
 
@@ -209,6 +270,7 @@ class GameEngine:
             self.state.phase = "Day"
 
             self.log("Day", "System", "PhaseStart", f"--- DAY {self.state.turn} START ---")
+            self._announce(f"Day {self.state.turn} begins")
             
             # Determine Speaking Order (Rotate based on Day)
             # Day 1 start index 0, Day 2 start index 1, etc.
@@ -247,6 +309,10 @@ class GameEngine:
                     content = f"{action_part}{speech}"
                     self.log("Day", player.state.name, "speak", content)
 
+                    # TTS for player speech
+                    if output.speech:
+                        self.tts.speak(output.speech, player.state.name)
+
                 except Exception as e:
                     self.log("Day", player.state.name, "error", f"Failed to speak: {e}")
 
@@ -281,6 +347,10 @@ class GameEngine:
                             output = nom_player.take_turn(self.state, self.state.turn)
                             self._print(f"\n💭 {nom_player.state.name} Defending: {output.thought}")
                             self.log("Defense", nom_player.state.name, "speak", f"[Defense] {output.speech or ''}")
+
+                            # TTS for defense speech
+                            if output.speech:
+                                self.tts.speak(output.speech, nom_player.state.name)
                         except Exception as e:
                             self._print(f"Error defending: {e}")
                 else:
@@ -342,6 +412,7 @@ class GameEngine:
                     
                     if len(victims_names) > 1:
                         self.log("Result", "System", "Tie", f"Tie between {', '.join(victims_names)}. ALL will be eliminated!")
+                        self._announce("There is a tie. All tied players will be eliminated")
                     
                     # Process deaths
                     for v_name in victims_names:
@@ -356,12 +427,17 @@ class GameEngine:
                             output = victim.take_turn(self.state, self.state.turn)
                             self._print(f"\n💭 {victim.state.name} LastWords: {output.thought}")
                             self.log("LastWords", victim.state.name, "speak", f"[Last Words] {output.speech or ''}")
+
+                            # TTS for last words
+                            if output.speech:
+                                self.tts.speak(output.speech, victim.state.name)
                         except Exception as e:
                             self.log("LastWords", victim.state.name, "error", f"Failed to speak last words: {e}")
 
                         # Execute Kill
                         victim.state.is_alive = False
                         self.log("Result", "System", "Death", f"{v_name} was HANGED by the town!")
+                        self._announce(f"{v_name} has been hanged by the town")
                         self._print(f"💀💀💀 {v_name} IS DEAD 💀💀💀")
                         self.log("Result", "System", "Info", f"{v_name} is dead.")
 
@@ -374,8 +450,8 @@ class GameEngine:
             # --- NIGHT PHASE ---
             self.state.phase = "Night"
             self.log("Night", "System", "PhaseStart", f"--- NIGHT {self.state.turn} START ---")
+            self._announce(f"Night {self.state.turn} begins")
 
-            
             mafia_alive = [p for p in self._get_living_players() if p.state.role == "Mafia"]
             
             if not mafia_alive:
@@ -397,6 +473,11 @@ class GameEngine:
                         action_tag = f"[Suggests killing {target}] " if target else ""
                         content = f"{action_tag}{output.speech or ''}"
                         self.log("Night", m_player.state.name, "whisper", content, is_secret=True)
+
+                        # TTS for mafia whisper
+                        if output.speech:
+                            self.tts.speak(output.speech, m_player.state.name)
+
                         if target:
                             mafia_votes[target] = mafia_votes.get(target, 0) + 1
                     except Exception as e:
@@ -424,6 +505,7 @@ class GameEngine:
                         victim.state.is_alive = False
                         self.log("Night", "System", "Kill", f"The Mafia killed {kill_target}")
                         self._print(f"\n🩸 TRAGEDY! {kill_target} was found DEAD in the morning.🩸")
+                        self._announce(f"{kill_target} was killed during the night")
                     else:
                          self.log("Night", "System", "Fail", "Mafia targeted invalid player.")
                 else:
