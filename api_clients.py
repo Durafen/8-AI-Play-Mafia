@@ -66,91 +66,144 @@ class UnifiedLLMClient:
             # Try to recover partial? No, strictly fail for now to catch issues early.
             raise ValueError(f"Failed to parse model output as JSON: {e}")
 
+    def _call_cli(self, command: str, model: str, prompt: str) -> str:
+        """Executes a local terminal command for the model."""
+        import subprocess
+        
+        # Construct command based on tool specific syntax
+        cmd = []
+        
+        if command == "codex":
+            # codex exec --model <model> <prompt>
+            cmd = ["codex", "exec", "--model", model, prompt]
+            
+        elif command == "claude":
+            # claude --print --model <model> <prompt>
+            cmd = ["claude", "--print", "--model", model, prompt]
+            
+        elif command == "gemini":
+            # gemini --model <model> <prompt> (Assumed standard based on usage)
+            cmd = ["gemini", "--model", model, prompt]
+            
+        elif command == "qwen":
+            # qwen --model <model> --prompt <prompt>  (OR positional?)
+            # Help said: -p, --prompt ... [deprecated: Use the positional prompt instead]
+            # So: qwen --model <model> <prompt>
+            cmd = ["qwen", "--model", model, prompt]
+            
+        else:
+            # Fallback
+            cmd = [command, "--model", model, prompt]
+        
+        try:
+            # Run command
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            return result.stdout
+        except subprocess.CalledProcessError as e:
+            # If command not found or fails
+            print(f"CLI Error ({command}): {e.stderr}")
+            raise e
+
     def generate_turn(self, player_name: str, provider: str, model_name: str, system_prompt: str, turn_prompt: str, turn_number: int) -> TurnOutput:
         
+        # TOGGLE: Set to False to use the real API
+        USE_CLI = True 
+        
         full_prompt = f"{system_prompt}\n\n{turn_prompt}"
+        if USE_CLI:
+             full_prompt += "\n\nIMPORTANT: Return ONLY JSON object."
         
         response_text = ""
 
         try:
-            if provider == "openai":
-                response = self.openai_client.chat.completions.create(
-                    model=model_name,
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": turn_prompt}
-                    ],
-                    response_format={"type": "json_object"}
-                )
-                response_text = response.choices[0].message.content
+            if USE_CLI:
+                # --- CLI MODE ---
+                cli_command = None
+                if provider == "openai":
+                    cli_command = "codex"
+                elif provider == "anthropic":
+                    cli_command = "claude"
+                elif provider == "google":
+                    cli_command = "gemini"
+                elif provider == "groq":
+                    cli_command = "qwen" 
 
-            elif provider == "xai": # Grok
-                model = model_name
-                # Grok Support for json_object
-                try:
-                    response = self.xai_client.chat.completions.create(
-                        model=model,
+                if cli_command:
+                    response_text = self._call_cli(cli_command, model_name, full_prompt)
+                else:
+                    raise ValueError(f"No CLI tool mapped for provider {provider}")
+
+            else:
+                # --- API MODE ---
+                if provider == "openai":
+                    response = self.openai_client.chat.completions.create(
+                        model=model_name,
                         messages=[
                             {"role": "system", "content": system_prompt},
                             {"role": "user", "content": turn_prompt}
                         ],
                         response_format={"type": "json_object"}
                     )
-                except:
-                     # Fallback if json_object not supported by specific beta
-                     response = self.xai_client.chat.completions.create(
-                        model=model,
+                    response_text = response.choices[0].message.content
+
+                elif provider == "xai": # Grok
+                    model = model_name
+                    try:
+                        response = self.xai_client.chat.completions.create(
+                            model=model,
+                            messages=[
+                                {"role": "system", "content": system_prompt},
+                                {"role": "user", "content": turn_prompt}
+                            ],
+                            response_format={"type": "json_object"}
+                        )
+                    except:
+                         response = self.xai_client.chat.completions.create(
+                            model=model,
+                            messages=[
+                                {"role": "system", "content": system_prompt},
+                                {"role": "user", "content": turn_prompt + "\n\nProvide your response in JSON format."}
+                            ]
+                        )
+                    response_text = response.choices[0].message.content
+
+                elif provider == "groq":
+                    response = self.groq_client.chat.completions.create(
+                        model=model_name,
                         messages=[
                             {"role": "system", "content": system_prompt},
-                            {"role": "user", "content": turn_prompt + "\n\nProvide your response in JSON format."}
+                            {"role": "user", "content": turn_prompt},
+                        ],
+                        response_format={"type": "json_object"}
+                    )
+                    response_text = response.choices[0].message.content
+
+                elif provider == "anthropic":
+                    response = self.anthropic_client.messages.create(
+                        model=model_name,
+                        max_tokens=1024,
+                        system=system_prompt,
+                        messages=[
+                            {"role": "user", "content": turn_prompt}
                         ]
                     )
-                response_text = response.choices[0].message.content
+                    response_text = response.content[0].text
 
-            elif provider == "groq":
-                response = self.groq_client.chat.completions.create(
-                    model=model_name,
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": turn_prompt},
-                    ],
-                    response_format={"type": "json_object"}
-                )
-                response_text = response.choices[0].message.content
-
-            elif provider == "anthropic":
-                # Anthropic doesn't have "system" role in messages list in the same way, passed as top-level arg.
-                response = self.anthropic_client.messages.create(
-                    model=model_name,
-                    max_tokens=1024,
-                    system=system_prompt,
-                    messages=[
-                        {"role": "user", "content": turn_prompt}
-                    ]
-                )
-                response_text = response.content[0].text
-
-            elif provider == "google":
-                # Google GenAI Code (v2 SDK)
-                # Client must be instantiated once, but here we do it ad-hoc or moving to __init__
-                # ideally we move client init to __init__ but keeping localized for minimal diff
-                from google import genai
-                from google.genai import types
-                
-                client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-                
-                response = client.models.generate_content(
-                    model=model_name,
-                    contents=turn_prompt,
-                    config=types.GenerateContentConfig(
-                        system_instruction=system_prompt,
-                        response_mime_type="application/json"
+                elif provider == "google":
+                    from google import genai
+                    from google.genai import types
+                    client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+                    response = client.models.generate_content(
+                        model=model_name,
+                        contents=turn_prompt,
+                        config=types.GenerateContentConfig(
+                            system_instruction=system_prompt,
+                            response_mime_type="application/json"
+                        )
                     )
-                )
-                response_text = response.text
-
-            else:
-                raise ValueError(f"Unknown provider: {provider}")
+                    response_text = response.text
+                else:
+                    raise ValueError(f"Unknown provider: {provider}")
 
             # Debug Log
             self._log_debug(player_name, turn_number, full_prompt, response_text)

@@ -6,19 +6,23 @@ from api_clients import UnifiedLLMClient
 from schemas import GameState, LogEntry, TurnOutput
 
 # Config for Roster
+# Config for Roster
 ROSTER_CONFIG = [
     # OPENAI
-    {"name": "Nano 5", "provider": "openai", "model": "gpt-5-nano"},
-    {"name": "Mini 4o", "provider": "openai", "model": "gpt-4o-mini"},
+    {"name": "GPT 5.2", "provider": "openai", "model": "gpt-5.2"},
+    {"name": "GPT 5.1", "provider": "openai", "model": "gpt-5.1"},
+    
     # ANTHROPIC
-    {"name": "Haiku 3.5", "provider": "anthropic", "model": "claude-3-5-haiku-20241022"}, 
-    {"name": "Haiku 3", "provider": "anthropic", "model": "claude-3-haiku-20240307"},
+    {"name": "Haiku", "provider": "anthropic", "model": "haiku"}, 
+    {"name": "Sonnet", "provider": "anthropic", "model": "sonnet"},
+
     # GOOGLE
-    {"name": "Flash 3", "provider": "google", "model": "gemini-3-flash-preview"},
-    {"name": "Flash-Lite 2.5", "provider": "google", "model": "gemini-2.5-flash-lite"},
-    # GROQ
-    {"name": "GPT OSS 120B", "provider": "groq", "model": "llama-3.3-70b-versatile"}, # Fallback to 3.3
-    {"name": "Scout 4", "provider": "groq", "model": "llama-3.1-8b-instant"}, # Fallback to 3.1
+    {"name": "Gemini 2.5 Pro", "provider": "google", "model": "gemini-2.5-pro"},
+    {"name": "Gemini 2.5 Flash", "provider": "google", "model": "gemini-2.5-flash"},
+    {"name": "Gemini 3 Flash", "provider": "google", "model": "gemini-3-flash-preview"},
+
+    # GROQ (Qwen)
+    {"name": "Qwen Coder", "provider": "groq", "model": "coder-model"}, 
 ]
 
 import shutil
@@ -64,10 +68,10 @@ class GameEngine:
 
         if is_secret:
             self.state.mafia_logs.append(entry)
-            print(f"\n[{phase_icon}{phase.upper()}][SECRET] {actor_display}  {content}")
+            print(f"\n[SECRET] {actor_display}  {content}")
         else:
             self.state.public_logs.append(entry)
-            print(f"\n[{phase_icon}{phase.upper()}] {actor_display}  {content}")
+            print(f"\n{actor_display}  {content}")
 
     def setup_game(self):
         print("Initializing Game...")
