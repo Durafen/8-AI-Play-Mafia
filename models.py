@@ -17,7 +17,7 @@ class Player:
     def set_partner(self, partner_name: str):
         self.partner_name = partner_name
 
-    def _build_system_prompt(self) -> str:
+    def _build_system_prompt(self, game_state: GameState) -> str:
         prompt = f"""You are a player in a game of Mafia.
 Your name is: {self.state.name}
 Your role is: {self.state.role}
@@ -43,10 +43,31 @@ You must respond in strict JSON format. Do not add markdown backticks.
 Schema:
 {
   "thought": "Your internal reasoning about the game state (hidden from others)",
-  "speech": "Your public statement to the town (max 4 sentences)",
-  "vote": "Name of the player you are voting for (or null if not voting)"
-}
 """
+        # Dynamic Speech Description
+        speech_desc = "Your public statement to the town (max 4 sentences)"
+        if game_state.phase == "Night" and self.state.role == "Mafia":
+            speech_desc = "Your secret whisper to your partner (Hidden from Town)"
+        
+        prompt += f'  "speech": "{speech_desc}",\n'
+
+        # Dynamic Vote Description
+        vote_desc = "null"
+        if game_state.phase == "Day":
+            if game_state.turn == 1:
+                vote_desc = "null (No voting on Day 1)"
+            else:
+                vote_desc = "Name of the player you are nominating for elimination (or null)"
+        elif game_state.phase == "Voting":
+            vote_desc = "Name of the NOMINATED candidate you are voting to eliminate"
+        elif game_state.phase == "Night" and self.state.role == "Mafia":
+            vote_desc = "Name of the player you want to KILL"
+        else:
+             vote_desc = "null"
+
+        prompt += f'  "vote": "{vote_desc}"\n'
+        prompt += "}\n"
+        
         return prompt
 
     def _build_turn_prompt(self, game_state: GameState) -> str:
@@ -80,24 +101,36 @@ Schema:
         prompt += "\nIt is your turn to speak.\n"
         
         if game_state.phase == "Voting":
-             prompt += "This is the VOTING phase. You MUST choose someone to hang.\n"
-             prompt += "Voting is SILENT. Do not speak. Set 'speech' to an empty string. Provide your 'vote' target.\n"
+             prompt += "This is the FINAL VOTING phase. All players must vote.\n"
+             prompt += f"Candidates for elimination: {', '.join(game_state.nominees)}\n"
+             prompt += "Voting is SILENT. Do not speak. Set 'speech' to an empty string.\n"
+             prompt += "You MUST vote for one of the Candidates above. Set 'vote' to their name.\n"
+        elif game_state.phase == "Defense":
+             prompt += "You have been NOMINATED for elimination. This is the DEFENSE phase.\n"
+             prompt += "Speak clearly to save your life! Convince the town not to hang you.\n"
+             prompt += "Set 'vote' to null.\n"
+        elif game_state.phase == "LastWords":
+             prompt += "The town has voted to ELIMINATE you. You are about to die.\n"
+             prompt += "This is your LAST WORD. Say your final goodbye or curse the town.\n"
+             prompt += "Set 'vote' to null.\n"
         elif game_state.phase == "Night":
              prompt += "It is NIGHT. You are whispering to your partner. Decide who to kill.\n"
              prompt += "Provide your thought and a target to kill in the 'vote' field.\n"
         else:
-             prompt += "It is DAY. Discuss, defend yourself, or accuse others.\n"
+             # Day Phase
+             prompt += f"It is DAY {game_state.turn}. Discussion and Nomination Phase.\n"
              if game_state.turn == 1:
-                 prompt += "It is Day 1. You are NOT voting today. Focus on gathering information.\n"
+                 prompt += "It is Day 1. No nominations or voting today. Focus on gathering information.\n"
                  prompt += "Set 'vote' to null.\n"
              else:
-                 prompt += f"It is Day {game_state.turn}. You will have to vote in the upcoming Voting Phase.\n"
-                 prompt += "You can signal your vote intent now if you wish, or set 'vote' to null.\n"
+                 prompt += "You can nominate someone for elimination using the 'vote' field.\n"
+                 prompt += "Any player who is nominated will have to DEFEND themselves before the final vote.\n"
+                 prompt += "Suggest a target in 'vote', or set it to null if undecided.\n"
 
         return prompt
 
     def take_turn(self, game_state: GameState, turn_number: int) -> TurnOutput:
-        system_prompt = self._build_system_prompt()
+        system_prompt = self._build_system_prompt(game_state)
         turn_prompt = self._build_turn_prompt(game_state)
         
         # Pass numbered name for file logging, but models use real name in prompt
