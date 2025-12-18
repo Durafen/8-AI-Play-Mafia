@@ -55,10 +55,53 @@ class UnifiedLLMClient:
     def _parse_and_validate(self, response_text: str) -> TurnOutput:
         """Attempts to parse JSON from the response and validate against TurnOutput schema."""
         try:
-            # Strip markdown code blocks if present
+            # 1. Try generic strip of markdown 
             clean_text = response_text.replace("```json", "").replace("```", "").strip()
-            data = json.loads(clean_text)
+            
+            # 2. Try Regex to find JSON object (handles headers/logs) or list
+            import re
+            # Match either object {...} OR list [...]
+            json_match = re.search(r"(\{|\[).+(\}|\])", response_text, re.DOTALL)
+            
+            # Let's try to parse whatever text we have as JSON first
+            data = None
+            try:
+                data = json.loads(clean_text)
+            except:
+                if json_match:
+                    clean_text = json_match.group(0)
+                    data = json.loads(clean_text)
+                else:
+                    raise
+
+            # 3. Handle CLI Wrapper Formats
+            
+            # Case A: List output (Qwen CLI)
+            if isinstance(data, list):
+                # Search for the "result" object in the list
+                found_result = False
+                for item in data:
+                    if isinstance(item, dict) and "result" in item and isinstance(item["result"], str):
+                        # Found it!
+                        clean_text = item["result"]
+                        clean_text = clean_text.replace("```json", "").replace("```", "").strip()
+                        data = json.loads(clean_text)
+                        found_result = True
+                        break
+                
+                if not found_result:
+                    print("Debug: JSON List returned but no 'result' field found.")
+                    # fallback, maybe the text was just a list? (Unlikely for TurnOutput)
+
+            # Case B: Nested "result" field in dict (Claude CLI)
+            elif isinstance(data, dict):
+                if "result" in data and isinstance(data["result"], str):
+                    inner_text = data["result"]
+                    inner_text = inner_text.replace("```json", "").replace("```", "").strip()
+                    data = json.loads(inner_text)
+            
             return TurnOutput(**data)
+
         except (json.JSONDecodeError, Exception) as e:
             # Fallback or error handling could go here. For now, re-raise or return a dummy fail.
             print(f"Error parsing JSON: {e}")
@@ -78,18 +121,16 @@ class UnifiedLLMClient:
             cmd = ["codex", "exec", "--model", model, prompt]
             
         elif command == "claude":
-            # claude --print --model <model> <prompt>
-            cmd = ["claude", "--print", "--model", model, prompt]
+            # claude --print --output-format json --model <model> <prompt>
+            cmd = ["claude", "--print", "--output-format", "json", "--model", model, prompt]
             
         elif command == "gemini":
-            # gemini --model <model> <prompt> (Assumed standard based on usage)
+            # gemini --model <model> <prompt>
             cmd = ["gemini", "--model", model, prompt]
             
         elif command == "qwen":
-            # qwen --model <model> --prompt <prompt>  (OR positional?)
-            # Help said: -p, --prompt ... [deprecated: Use the positional prompt instead]
-            # So: qwen --model <model> <prompt>
-            cmd = ["qwen", "--model", model, prompt]
+            # qwen --output-format json --model <model> <prompt>
+            cmd = ["qwen", "--output-format", "json", "--model", model, prompt]
             
         else:
             # Fallback
