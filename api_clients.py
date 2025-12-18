@@ -97,7 +97,14 @@ class UnifiedLLMClient:
             elif isinstance(data, dict):
                 if "result" in data and isinstance(data["result"], str):
                     inner_text = data["result"]
+                    # Clean markdown
                     inner_text = inner_text.replace("```json", "").replace("```", "").strip()
+                    
+                    # Try regex again on inner text because it might have emojis/prefixes (like 🤖)
+                    inner_match = re.search(r"\{.*\}", inner_text, re.DOTALL)
+                    if inner_match:
+                        inner_text = inner_match.group(0)
+                        
                     data = json.loads(inner_text)
             
             return TurnOutput(**data)

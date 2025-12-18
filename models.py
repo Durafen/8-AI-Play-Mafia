@@ -87,7 +87,12 @@ Schema:
              prompt += "Provide your thought and a target to kill in the 'vote' field.\n"
         else:
              prompt += "It is DAY. Discuss, defend yourself, or accuse others.\n"
-             prompt += "Speak concisely (max 50 words). You are NOT voting yet, so set 'vote' to null.\n"
+             if game_state.turn == 1:
+                 prompt += "It is Day 1. You are NOT voting today. Focus on gathering information.\n"
+                 prompt += "Set 'vote' to null.\n"
+             else:
+                 prompt += f"It is Day {game_state.turn}. You will have to vote in the upcoming Voting Phase.\n"
+                 prompt += "You can signal your vote intent now if you wish, or set 'vote' to null.\n"
 
         return prompt
 
@@ -109,7 +114,7 @@ Schema:
 
         # Save thought to memory
         if output.thought:
-            self.state.previous_thoughts.append(f"Day {turn_number}: {output.thought}")
+            self.state.previous_thoughts.append(f"{game_state.phase} {turn_number}: {output.thought}")
         
         return output
 

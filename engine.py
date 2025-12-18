@@ -40,7 +40,7 @@ class GameEngine:
         self.players: List[Player] = []
         self.active_players: Dict[str, Player] = {} # Name -> Player obj
 
-    def log(self, phase: str, actor: str, action: str, content: str, is_secret: bool = False):
+    def log(self, phase: str, actor: str, action: str, content: str, is_secret: bool = False, vote_target: str = None):
         # Determine display name with number if actor is a player
         actor_display = actor
         player = next((p for p in self.players if p.state.name == actor), None)
@@ -51,6 +51,14 @@ class GameEngine:
             # Add Mafia Icon for terminal display only
             if player.state.role == "Mafia":
                 actor_display = f"👺 {actor_display}"
+
+        # Append vote text to content for persistent history
+        if vote_target:
+             vote_marker = "(Secret Vote)" if is_secret else f"[VOTE: {vote_target}]"
+             # If it's already a Voting phase log, the content usually says "Voted for...", so check to avoid double entry?
+             # Actually, Day phase speech might have a vote signal.
+             if "Voted for" not in content and "Suggests killing" not in content:
+                  content = f"{content} {vote_marker}"
 
         entry = LogEntry(
             turn=self.state.turn,
@@ -66,12 +74,18 @@ class GameEngine:
         elif phase == "Night": phase_icon = "🌙 "
         elif phase == "Voting": phase_icon = "🗳️ "
 
+        # Append vote visual
+        vote_str = ""
+        if vote_target:
+             icon = "🔪" if is_secret else "🗳️"
+             vote_str = f" [{icon} {vote_target}]"
+
         if is_secret:
             self.state.mafia_logs.append(entry)
-            print(f"\n[SECRET] {actor_display}  {content}")
+            print(f"\n[SECRET] {actor_display} {vote_str} {content}")
         else:
             self.state.public_logs.append(entry)
-            print(f"\n{actor_display}  {content}")
+            print(f"\n{actor_display} {vote_str} {content}")
 
     def setup_game(self):
         print("Initializing Game...")
@@ -143,6 +157,7 @@ class GameEngine:
             # --- DAY PHASE ---
             self.state.phase = "Day"
             print(f"\n☀️  DAY {self.state.turn} STARTS ☀️")
+            self.log("Day", "System", "PhaseStart", f"--- DAY {self.state.turn} START ---")
             
             # Skip speech loop on Day 1? No, user said "Day 1... No voting". implied speech OK.
             # "Day cycle... speak... move to next... then vote."
@@ -161,7 +176,7 @@ class GameEngine:
                     prefix = "👺 " if player.state.role == "Mafia" else ""
                     print(f"\n💭 {prefix}{player.state.name} Thinking: {output.thought}")
                     
-                    self.log("Day", player.state.name, "speak", output.speech)
+                    self.log("Day", player.state.name, "speak", output.speech, vote_target=output.vote)
                 except Exception as e:
                     self.log("Day", player.state.name, "error", f"Failed to speak: {e}")
 
@@ -185,14 +200,18 @@ class GameEngine:
                         if vote_target not in [p.state.name for p in living]:
                             vote_target = "Skip" # Invalid vote
                         
-                        self.log("Voting", player.state.name, "vote", f"Voted for {vote_target} | Reason: {output.speech}")
+                        self.log("Voting", player.state.name, "vote", f"Voted for {vote_target} | Reason: {output.speech}", vote_target=vote_target)
                         
                         if vote_target != "Skip":
                             votes[vote_target] = votes.get(vote_target, 0) + 1
                     except Exception as e:
                         print(f"Error voting: {e}")
 
-                # Tally
+                # Tally Summary
+                tally_parts = [f"{k} ({v})" for k,v in votes.items()]
+                tally_str = ", ".join(tally_parts) if tally_parts else "No votes"
+                self.log("Voting", "System", "VoteSummary", f"Votes Cast: {tally_str}")
+
                 if not votes:
                     self.log("Result", "System", "NoLynch", "No votes cast.")
                 else:
@@ -218,6 +237,8 @@ class GameEngine:
             # --- NIGHT PHASE ---
             self.state.phase = "Night"
             print(f"\n🌙 NIGHT {self.state.turn} FALLS 🌙")
+            self.log("Night", "System", "PhaseStart", f"--- NIGHT {self.state.turn} START ---")
+            self.log("Night", "System", "PhaseStart", f"--- NIGHT {self.state.turn} START ---", is_secret=True)
             
             mafia_alive = [p for p in self._get_living_players() if p.state.role == "Mafia"]
             
@@ -237,13 +258,17 @@ class GameEngine:
                         print(f"\n💭 👺 {m_player.state.name} (Mafia) Thinking: {output.thought}")
 
                         target = output.vote
-                        self.log("Night", m_player.state.name, "whisper", f"Suggests killing {target}: {output.speech}", is_secret=True)
+                        self.log("Night", m_player.state.name, "whisper", f"Suggests killing {target}: {output.speech}", is_secret=True, vote_target=target)
                         if target:
                             mafia_votes[target] = mafia_votes.get(target, 0) + 1
                     except Exception as e:
                         print(f"Mafia Error: {e}")
 
-                # Consensus
+                # Consensus Summary
+                tally_parts = [f"{k} ({v})" for k,v in mafia_votes.items()]
+                tally_str = ", ".join(tally_parts) if tally_parts else "No votes"
+                self.log("Night", "System", "VoteSummary", f"Mafia Votes: {tally_str}", is_secret=True)
+
                 if mafia_votes:
                     kill_target, _ = max(mafia_votes.items(), key=lambda x: x[1])
                     # Execute Kill
