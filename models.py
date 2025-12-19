@@ -3,7 +3,7 @@ from schemas import PlayerState, TurnOutput, GameState, LogEntry
 from api_clients import UnifiedLLMClient
 
 class Player:
-    def __init__(self, name: str, role: str, provider: str, model_name: str, client: UnifiedLLMClient, player_index: int):
+    def __init__(self, name: str, role: str, provider: str, model_name: str, client: UnifiedLLMClient, player_index: int, memory_enabled: bool = True):
         self.state = PlayerState(
             name=name,
             role=role,
@@ -13,6 +13,16 @@ class Player:
         self.client = client
         self.player_index = player_index
         self.partner_name: Optional[str] = None # For mafia to know their partner
+        self.memory: str = ""
+        self.memory_enabled = memory_enabled
+        
+        # Load existing memory if available and enabled
+        if self.memory_enabled:
+            try:
+                with open(f"memories/{name}.txt", "r") as f:
+                    self.memory = f.read().strip()
+            except FileNotFoundError:
+                self.memory = ""
 
     def set_partner(self, partner_name: str):
         self.partner_name = partner_name
@@ -38,6 +48,14 @@ Deceive the town and eliminate them until you outnumber them.
             prompt += """
 GOAL:
 Find and eliminate the Mafia.
+"""
+
+        if self.memory:
+            prompt += f"""
+--- YOUR MEMORIES & STRATEGY FROM PREVIOUS GAMES ---
+{self.memory}
+-----------------------------------------
+Use these lessons to improve your gameplay!
 """
 
         prompt += """
@@ -104,13 +122,16 @@ Schema:
                 prompt += f"- {t}\n"
 
         # 5. Instructions
-        prompt += "\nIt is your turn to speak.\n"
+        prompt += "\n### INSTRUCTIONS ###\n"
+        prompt += "It is your turn to speak.\n"
         
         if game_state.phase == "Voting":
              prompt += "This is the FINAL VOTING phase.\n"
              prompt += f"Candidates for elimination: {', '.join(game_state.nominees)}\n"
+             prompt += f"There are {len(living)} active voters (including you).\n"
              prompt += "Voting is SILENT. Do not speak. Set 'speech' to an empty string.\n"
              prompt += "You may vote for one of the Candidates above, or you may abstain.\n"
+             prompt += "Warning: If there is a tie, ALL tied candidates will be eliminated.\n"
              prompt += "To vote, set 'vote' to the candidate's name. To abstain, set 'vote' to null.\n"
         elif game_state.phase == "Defense":
              prompt += "You have been NOMINATED for elimination. This is the DEFENSE phase.\n"
@@ -163,4 +184,87 @@ Schema:
             self.state.previous_thoughts.append(f"{game_state.phase} {turn_number}: {output.thought}")
         
         return output
+
+    def reflect_on_game(self, game_state: GameState, winner: str) -> str:
+        """
+        Ask the model to reflect on the game and update its memory file.
+        """
+        system_prompt = f"""You are {self.state.name}, a player in a Mafia game.
+The game is over.
+Winner: {winner}
+Your Role: {self.state.role}
+Your Status: {'Alive' if self.state.is_alive else 'Dead'}
+
+GOAL:
+Analyze the game logs and your own performance. 
+Write a summary (MAX 300 WORDS) of what you learned, your strategy for next time, and key takeaways.
+This text will be SAVED to your memory file and provided to you in the next game.
+
+Output ONLY the memory text. Do not output JSON.
+"""
+
+        turn_prompt = "--- PUBLIC GAME LOG ---\n"
+        for log in game_state.public_logs:
+            if log.phase == "Reflection" and log.actor != "System":
+                continue
+            turn_prompt += f"[{log.phase}] {log.actor}: {log.content}\n"
+
+        turn_prompt += "\n--- SECRET MAFIA LOG (Revealed) ---\n"
+        for log in game_state.mafia_logs:
+            turn_prompt += f"[{log.phase}] {log.actor}: {log.content}\n"
+
+        if self.state.previous_thoughts:
+            turn_prompt += "\n--- YOUR PRIVATE THOUGHTS (Context) ---\n"
+            for t in self.state.previous_thoughts:
+                turn_prompt += f"- {t}\n"
+
+        if self.memory:
+            turn_prompt += f"\n--- YOUR OLD MEMORY ---\n{self.memory}\n"
+
+        turn_prompt += "\n### INSTRUCTIONS ###\n"
+        turn_prompt += "Based on the above, write your NEW memory/strategy file (Max 300 words). This will REPLACE your old memory."
+
+        # Use the existing client which enforces the TurnOutput schema (thought, speech, vote).
+        # We will repurpose these fields for the reflection phase.
+        
+        log_name = f"{self.player_index}_{self.state.name}"
+        try:
+            system_prompt = f"""You are {self.state.name}, a player in a Mafia game.
+The game is over.
+Winner: {winner}
+Your Role: {self.state.role}
+Your Status: {'Alive' if self.state.is_alive else 'Dead'}
+
+GOAL:
+Analyze the game logs and your own performance. 
+You must COMBINE your 'Old Memory' (if any) with the NEW lessons from this game.
+Write a single, updated summary (MAX 300 WORDS) that synthesizes your long-term strategy.
+This text will be SAVED to your memory file and provided to you in the next game.
+
+KEY INSTRUCTION:
+Focus on GENERIC RULES and HIGH-LEVEL STRATEGIES (e.g., "Always doubt the quiet ones," "Defend partners aggressively") rather than specific details from this game (e.g., "Don't trust Rick," "Vote for Qwen").
+We want actionable wisdom that applies to ANY game, not just a replay of this one.
+
+IMPORTANT:
+- Put your memory text in the 'thought' field of the JSON output.
+- Set 'speech' to "MEMORY_FILE_UPDATE"
+- Set 'vote' to null
+- KEEP IT CONCISE. Absolute limit is 300 words. If you write more, it will be violently cut off.
+"""
+            
+            output = self.client.generate_turn(
+                player_name=log_name,
+                provider=self.state.provider,
+                model_name=self.state.model_name,
+                system_prompt=system_prompt,
+                turn_prompt=turn_prompt,
+                turn_number=999
+            )
+            
+            return output.thought.strip()
+            
+        except Exception as e:
+            print(f"Error generating memory for {self.state.name}: {e}")
+            return self.memory # Return old memory on failure
+
 

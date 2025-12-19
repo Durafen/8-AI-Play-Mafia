@@ -9,6 +9,44 @@ It supports multiple AI providers including OpenAI, Anthropic, Google Gemini, an
 
 ---
 
+## ⚔️ The AI Battle Royale
+
+Watch the most advanced AI models from competing companies deceive and outsmart each other:
+
+| Player | Provider | Model |
+|--------|----------|-------|
+| Rick | OpenAI | GPT-5.2 |
+| Morty | OpenAI | GPT-5.1 |
+| Sonnet | Anthropic | Claude Sonnet 4 |
+| Haiku | Anthropic | Claude Haiku 3.5 |
+| Pro | Google | Gemini 2.5 Pro |
+| Flash | Google | Gemini 2.5 Flash |
+| Preview | Google | Gemini 3 Flash Preview |
+| Qwen | Groq | Qwen 3 Coder |
+
+---
+
+## 🌟 Spectacular Example Games
+
+Check out some of our best simulated games to see high-level AI deception and deduction in action:
+
+*   **[Example 1: The "Trust the Pattern" Trap](https://raw.githubusercontent.com/Durafen/8-AI-Play-Mafia/master/examples/example1.txt)**
+    *   **Highlights**: Day 1 starts with a brilliant "accountability framework" proposed by Rick (Town) to trap the Mafia. It works perfectly... until the Mafia flips the script. By the end, a Town player (Sonnet) is executed while confidently explaining why their execution is mathematically impossible if they were Town. Watch how "perfect logic" can be weaponized to lead the Town off a cliff.
+
+*   **[Example 2: The "Mafia Math" Deception](https://raw.githubusercontent.com/Durafen/8-AI-Play-Mafia/master/examples/example2.txt)**
+    *   **Highlights**: A masterclass in 1v1v1 endgame manipulation! With 3 players left (1 Mafia, 2 Town), Morty (Town) is absolutely convinced he has solved the game using "parity math." He clears one player (Pro) completely based on game theory. But is his math right? Or is he confidently walking into a trap set by a "confirmed townie"? See if Flash can spot the flaw before it's too late.
+
+*   **[Example 3: 3v2 LYLO: The "Ghost Narrative" Logic Trap](https://raw.githubusercontent.com/Durafen/8-AI-Play-Mafia/master/examples/example3.txt)**
+    *   **Highlights**: In a tense 3v2 finale, Town player Preview brilliantly exposes a 'Weaponized Consensus' strategy used to control the game. The table is set for a massive turnaround, but it all hinges on Qwen. Will Qwen see through the 'Ghost Narrative,' or will the 'Wall of Logic' prove too strong? Watch the psychological pressure cooker explode.
+
+*   **[Example 4: The "Illogical Killer" Gambit](https://raw.githubusercontent.com/Durafen/8-AI-Play-Mafia/master/examples/example4.txt)**
+    *   **Highlights**: Pro (Mafia) attempts a high-risk "Illogical Killer" gambit. After the *only* player voting for him is killed, he uses the paradox as his defense: "Why would I silence my own critic?" In the endgame, he targets the quietest player (Qwen), arguing that his own "loud and messy" play is proof of innocence. It becomes a showdown of narratives: is Pro a confused Villager, or is he hiding in plain sight?
+
+*   **[Example 5: The "Victory Speech" Bluff](https://raw.githubusercontent.com/Durafen/8-AI-Play-Mafia/master/examples/example5.txt)**
+    *   **Highlights**: Facing a mathematical loss in a 2v1 endgame, Haiku (Mafia) tries a bold anti-strategy: he congratulates the Town on their win and *abstains* from voting, refusing to nominate anyone. It's a high-stakes dare: is he a defeated Villager accepting fate, or a Scum player hoping the Town will eat itself if he refuses to fight? Watch the final two Townies spiral as they try to interpret the silence.
+
+---
+
 ## 🚀 Features
 
 *   **Multi-Model Roster**: Pit different models against each other (e.g., GPT-5.2 vs Claude Sonnet vs Gemini 2.5).
@@ -18,6 +56,7 @@ It supports multiple AI providers including OpenAI, Anthropic, Google Gemini, an
 *   **Detailed Logs**: Observe "inner thoughts" of models to understand their strategy and deception.
 *   **Rich Terminal UI**: Formatted output with icons for Day/Night cycles and role reveals.
 *   **Game Persistence**: Game logs saved to `games/` directory with timestamps.
+*   **Persistent Memory** 🧠: Models learn from previous games! They write a strategic summary after each match and use it in the next one.
 
 ---
 
@@ -64,6 +103,18 @@ Follow the on-screen prompts. You will need to press `ENTER` to advance the game
 If `AUTO_CONTINUE = True` is set in `engine.py`, the game will proceed automatically.
 *   **Pause**: Press **SPACE** during the 2-second delay between turns to pause the game.
 *   **Resume**: Press **SPACE** again to resume.
+
+### 🧠 Persistent Memory System
+The game now features a **learning system**:
+1.  **Loading**: At the start of a game, players load their "Memory" from `memories/{Name}.txt`.
+2.  **Reflection Phase**: After the game ends, all players (living and dead) analyze the full logs (including secret Mafia communications).
+3.  **Learning**: They generate a new 300-word strategic summary, combining old wisdom with new lessons. This file is overwritten for the next game.
+
+**Configuration:**
+In `engine.py`, you can toggle this system:
+```python
+MEMORY_ENABLED = True  # Set to False to disable memory/learning
+```
 
 
 ---
@@ -165,6 +216,7 @@ ROSTER_CONFIG = [
 The game generates detailed logs in the `/logs` directory:
 *   `public_logs.txt`: What the players see.
 *   `{PlayerName}_history.txt`: Full context window for a specific agent (includes debugging info).
+*   `memories/`: Persistent strategy files for each player key.
 
 ---
 

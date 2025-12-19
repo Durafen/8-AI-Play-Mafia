@@ -9,6 +9,7 @@ from schemas import GameState, LogEntry, TurnOutput
 TTS_ENABLED = True   # Set to False to disable text-to-speech
 TTS_RATE = "+20%"    # Speech speed: "+20%" = 20% faster, "-10%" = 10% slower
 AUTO_CONTINUE = True # Set to True to run without user intervention
+MEMORY_ENABLED = True # Set to True to enable distinct memories per player from previous games
 
 # Config for Roster (with TTS voices)
 ROSTER_CONFIG = [
@@ -144,6 +145,8 @@ class GameEngine:
 
         # Create persistent games directory
         os.makedirs("games", exist_ok=True)
+        # Create memories directory
+        os.makedirs("memories", exist_ok=True)
 
         # Initialize Game Log as a flat file in games/
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -209,6 +212,7 @@ class GameEngine:
         elif phase == "Defense": phase_icon = "🛡️ "
         elif phase == "LastWords": phase_icon = "💀 "
         elif phase == "Setup": phase_icon = "⚙️ "
+        elif phase == "Reflection": phase_icon = ""
 
         # Append vote visual
         vote_str = ""
@@ -231,7 +235,7 @@ class GameEngine:
             display_icon = "🌚 "
         
         # Rule 3: Short/Intense phases always use their icon for visibility
-        elif phase in ["Voting", "Defense", "LastWords", "Setup"]:
+        elif phase in ["Voting", "Defense", "LastWords", "Setup", "Reflection"]:
              display_icon = phase_icon
              
         # Rule 4: Day/Night System messages (Info, etc) -> NO ICON
@@ -273,7 +277,8 @@ class GameEngine:
                 provider=config["provider"],
                 model_name=config["model"],
                 client=self.client,
-                player_index=i+1
+                player_index=i+1,
+                memory_enabled=MEMORY_ENABLED
             )
             self.players.append(p)
             self.state.players.append(p.state)
@@ -323,10 +328,12 @@ class GameEngine:
         if mafia_count == 0:
             self._print("\n🎉 TOWN WINS! All Mafia eliminated. 🎉")
             self._announce("Town wins! All Mafia have been eliminated")
+            self._run_reflection("Town")
             return True
         if mafia_count >= town_count:
             self._print("\n💀 MAFIA WINS! They have parity with Town. 💀")
             self._announce("Mafia wins!")
+            self._run_reflection("Mafia")
             return True
         return False
 
@@ -460,6 +467,13 @@ class GameEngine:
     
                     self.state.phase = "Voting"
                     self._print("\n🗳️  VOTING TIME 🗳️")
+
+                    living_count = len([p for p in living])
+                    candidates_str = ", ".join(nominees) if nominees else "everyone (since no nominations)"
+                    
+                    self.log("Voting", "System", "Info", f"There are {living_count} voters.")
+                    self.log("Voting", "System", "Info", f"Valid Candidates for Elimination: {candidates_str}")
+
                     self._announce("It is voting time.")
 
     
@@ -659,6 +673,47 @@ class GameEngine:
     
                 self._wait_for_next(listener)
                 self.state.turn += 1
+
+    def _run_reflection(self, winner: str):
+        """Allow all players to reflect and update their memories"""
+        if not MEMORY_ENABLED:
+            self.log("Reflection", "System", "Skip", "Memory system disabled. Skipping reflection.")
+            return
+
+        self.state.phase = "Reflection"
+        self._print("\n🧠 REFLECTION PHASE 🧠")
+        self._print("Players are analyzing their performance...")
+        self.log("Reflection", "System", "PhaseStart", "--- REFLECTION PHASE START ---")
+        
+        # Log Winner and Mafia Reveal
+        self.log("Reflection", "System", "Winner", f"The Winner is: {winner}")
+        mafia_names = [p.state.name for p in self.players if p.state.role == "Mafia"]
+        self.log("Reflection", "System", "MafiaReveal", f"The Mafia were: {', '.join(mafia_names)}")
+
+        self._announce("The game is over. Players are now reflecting on their strategy.")
+
+        # Wait for announcement to finish before starting the reflection loop
+        self.tts.wait_for_speech()
+
+        for p in self.players:
+            self._print(f"Writing memory for {p.state.name}...")
+            try:
+                # 1. Generate Reflection (Blocking)
+                # While this computes, the PREVIOUS player's TTS might be playing in background.
+                new_memory = p.reflect_on_game(self.state, winner)
+                
+                # 2. Save to file
+                with open(f"memories/{p.state.name}.txt", "w", encoding='utf-8') as f:
+                    f.write(new_memory)
+                
+                # 3. Log to Game Log and Console
+                self._print(f"\n🧠 {p.state.name} Memory: {new_memory}")
+                self.log("Reflection", p.state.name, "reflect", new_memory)
+
+            except Exception as e:
+                self._print(f"Error saving memory for {p.state.name}: {e}")
+        
+        self._print("All memories updated for next game.")
 
 if __name__ == "__main__":
     engine = GameEngine()
