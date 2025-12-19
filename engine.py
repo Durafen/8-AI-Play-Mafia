@@ -13,17 +13,17 @@ AUTO_CONTINUE = True # Set to True to run without user intervention
 # Config for Roster (with TTS voices)
 ROSTER_CONFIG = [
     # OPENAI
-    {"name": "GPT2", "provider": "openai", "model": "gpt-5.2", "voice": "en-US-GuyNeural"},
-    {"name": "GPT1", "provider": "openai", "model": "gpt-5.1", "voice": "en-US-ChristopherNeural"},
+    {"name": "Rick", "provider": "openai", "model": "gpt-5.2", "voice": "en-US-GuyNeural"},
+    {"name": "Morty", "provider": "openai", "model": "gpt-5.1", "voice": "en-US-ChristopherNeural"},
 
     # ANTHROPIC
     {"name": "Haiku", "provider": "anthropic", "model": "haiku", "voice": "en-GB-RyanNeural"},
     {"name": "Sonnet", "provider": "anthropic", "model": "sonnet", "voice": "en-AU-WilliamNeural"},
 
     # GOOGLE
-    {"name": "Gemini Pro", "provider": "google", "model": "gemini-2.5-pro", "voice": "en-NZ-MitchellNeural"},
-    {"name": "Gemini Flash", "provider": "google", "model": "gemini-2.5-flash", "voice": "en-IE-ConnorNeural"},
-    {"name": "Gemini Preview", "provider": "google", "model": "gemini-3-flash-preview", "voice": "en-CA-LiamNeural"},
+    {"name": "Pro", "provider": "google", "model": "gemini-2.5-pro", "voice": "en-NZ-MitchellNeural"},
+    {"name": "Flash", "provider": "google", "model": "gemini-2.5-flash", "voice": "en-IE-ConnorNeural"},
+    {"name": "Preview", "provider": "google", "model": "gemini-3-flash-preview", "voice": "en-CA-LiamNeural"},
 
     # GROQ (Qwen)
     {"name": "Qwen", "provider": "groq", "model": "coder-model", "voice": "en-ZA-LukeNeural"},
@@ -244,7 +244,7 @@ class GameEngine:
         else:
             self.state.public_logs.append(entry)
             display_content = content.replace("[Nominated", "[👉 Nominated").replace("[Voted for", "[🗳️ Voted for").replace("[Suggests killing", "[🔪 Suggests killing").replace("[Defense]", "[🛡️ Defense]").replace("[Last Words]", "[💀 Last Words]")
-            self._print(f"\n{display_icon}{actor_display} {vote_str} {display_content}")
+            self._print(f"\n{display_icon}{actor_display}{vote_str} {display_content}")
 
     def setup_game(self):
         self._print("Initializing Game...")
@@ -416,7 +416,11 @@ class GameEngine:
                     self.state.nominees = nominees # Save for prompt generation
     
                     if nominees:
+                        # Wait for last speaker to finish
+                        self.tts.wait_for_speech()
+                        
                         self.state.phase = "Defense"
+
                         self._print(f"\n🛡️  DEFENSE PHASE 🛡️")
                         
                         nominee_display = [f"{n} ({nominee_counts[n]})" for n in nominees]
@@ -476,25 +480,31 @@ class GameEngine:
     
                             # Validate vote
                             # MUST be in nominees list (if nominees exist)
-                            if nominees and vote_target not in nominees:
+                            if vote_target in [None, "null", "Skip", "skip"]:
+                                vote_target = None
+                            elif nominees and vote_target not in nominees:
                                 self._print(f"[Invalid Vote] {player.state.name} voted for {vote_target} (Not a nominee)")
-                                vote_target = "Skip"
+                                vote_target = None
                             elif not nominees and vote_target not in [p.state.name for p in living]:
-                                 # Fallback if no nominees (shouldn't happen due to logic above skipping phase, but safety)
-                                 vote_target = "Skip"
+                                 # Fallback
+                                 vote_target = None
     
                             final_votes[player.state.name] = vote_target
     
                             # Log the vote
-                            self.log("Voting", player.state.name, "vote", f"[Voted for {vote_target}]")
-    
-                            # TTS for vote announcement
-                            if vote_target and vote_target != "Skip":
+                            if vote_target:
+                                self.log("Voting", player.state.name, "vote", f"[Voted for {vote_target}]")
+                                # TTS for vote announcement
                                 self.tts.speak(f"{player.state.name} votes for {vote_target}.", player.state.name, background=True)
+                            else:
+                                # Log as absent/abstain with square brackets
+                                self.log("Voting", player.state.name, "vote", "[Abstained]")
+                                self.tts.speak(f"{player.state.name} abstains.", player.state.name, background=True)
     
                         except Exception as e:
                             self._print(f"Error voting: {e}")
-                            final_votes[player.state.name] = "Skip"
+                            final_votes[player.state.name] = None
+                            self.log("Voting", player.state.name, "vote", "[Abstained]")
     
                         # User can press Enter while TTS plays
                         self._wait_for_next(listener)
@@ -502,14 +512,16 @@ class GameEngine:
                     # Aggregate Tally from final_votes
                     votes = {}
                     for target in final_votes.values():
-                        if target != "Skip":
+                        if target:
                             votes[target] = votes.get(target, 0) + 1
     
                     # Tally Summary
+                    self.tts.wait_for_speech()
                     tally_parts = [f"{k} ({v})" for k,v in votes.items()]
                     tally_str = ", ".join(tally_parts) if tally_parts else "No votes"
                     self.log("Voting", "System", "VoteSummary", f"Votes Cast: {tally_str}")
                     self._announce(f"Votes Cast: {tally_str}")
+
     
                     if not votes:
                         self.log("Result", "System", "NoLynch", "No votes cast.")

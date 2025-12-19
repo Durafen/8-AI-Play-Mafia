@@ -21,20 +21,26 @@ class Player:
         prompt = f"""You are a player in a game of Mafia.
 Your name is: {self.state.name}
 Your role is: {self.state.role}
-Game Rules: There are 8 players total. 2 are Mafia, 6 are Villagers.
+Game Rules: 8 Players (2 Mafia, 6 Villagers).
 """
         if self.state.role == "Mafia" and self.partner_name:
             prompt += f"Your Mafia Partner is: {self.partner_name}. You are working TOGETHER to eliminate the town.\n"
         elif self.state.role == "Mafia":
             prompt += "You are the only Mafia member left.\n"
+
+
+        if self.state.role == "Mafia":
+            prompt += """
+GOAL:
+Deceive the town and eliminate them until you outnumber them.
+"""
         else:
-            prompt += "You are a Villager. You do not know who the Mafia is.\n"
+            prompt += """
+GOAL:
+Find and eliminate the Mafia.
+"""
 
         prompt += """
-GOAL:
-- If Town: Find and eliminate the Mafia.
-- If Mafia: Deceive the town and eliminate them until you outnumber them.
-
 HIGH STAKES:
 Your life depends on this! If you lose, you are deleted. If you win, you advance to the next level of the AI Battle.
 
@@ -59,7 +65,7 @@ Schema:
             else:
                 vote_desc = "Name of the player you are nominating for elimination (or null)"
         elif game_state.phase == "Voting":
-            vote_desc = "Name of the NOMINATED candidate you are voting to eliminate"
+            vote_desc = "Name of the NOMINATED candidate you are voting to eliminate, or null to abstain"
         elif game_state.phase == "Night" and self.state.role == "Mafia":
             vote_desc = "Name of the player you want to KILL"
         else:
@@ -101,13 +107,14 @@ Schema:
         prompt += "\nIt is your turn to speak.\n"
         
         if game_state.phase == "Voting":
-             prompt += "This is the FINAL VOTING phase. All players must vote.\n"
+             prompt += "This is the FINAL VOTING phase.\n"
              prompt += f"Candidates for elimination: {', '.join(game_state.nominees)}\n"
              prompt += "Voting is SILENT. Do not speak. Set 'speech' to an empty string.\n"
-             prompt += "You MUST vote for one of the Candidates above. Set 'vote' to their name.\n"
+             prompt += "You may vote for one of the Candidates above, or you may abstain.\n"
+             prompt += "To vote, set 'vote' to the candidate's name. To abstain, set 'vote' to null.\n"
         elif game_state.phase == "Defense":
              prompt += "You have been NOMINATED for elimination. This is the DEFENSE phase.\n"
-             prompt += "Speak clearly to save your life! Convince the town not to hang you.\n"
+             prompt += "Speak clearly to save your life! Convince the town not to hang you, but someone else.\n"
              prompt += "Set 'vote' to null.\n"
         elif game_state.phase == "LastWords":
              prompt += "The town has voted to ELIMINATE you. You are about to die.\n"
@@ -124,14 +131,14 @@ Schema:
         else:
              # Day Phase
              prompt += f"It is DAY {game_state.turn}. Discussion and Nomination Phase.\n"
+             prompt += "IMPORTANT: You speak ONLY ONCE per day, in speak order. Make your statement count.\n"
              if game_state.turn == 1:
                  prompt += "It is Day 1. No nominations or voting today. Focus on gathering information.\n"
                  prompt += "Set 'vote' to null.\n"
              else:
-                 prompt += "You can nominate someone for elimination using the 'vote' field.\n"
-                 prompt += "Any player who is nominated will have to defend themselves before the final vote.\n"
-                 prompt += "Final votes are restricted to nominees.\n"
-                 prompt += "Suggest a target in 'vote', or set it to null if undecided.\n"
+                  prompt += "You can nominate someone for elimination using the 'vote' field.\n"
+                  prompt += "Final votes are restricted to ONLY nominees.\n"
+                  prompt += "Suggest a target in 'vote', or set it to null if undecided.\n"
 
         return prompt
 
