@@ -20,6 +20,7 @@ class PlayerState(BaseModel):
     is_alive: bool = True
     provider: str
     model_name: str # Technical API model name
+    use_cli: bool = True  # True = CLI tool, False = API
     strategy: str = ""  # Living strategic plan, overwritten each turn
 
 class GameState(BaseModel):

@@ -49,7 +49,15 @@ class UnifiedLLMClient:
                 base_url="https://api.groq.com/openai/v1",
             )
 
-    def _log_debug(self, player_name: str, turn_number: int, prompt: str, response: str):
+        # OpenRouter
+        self.openrouter_client = None
+        if os.getenv("OPENROUTER_API_KEY"):
+            self.openrouter_client = OpenAI(
+                api_key=os.getenv("OPENROUTER_API_KEY"),
+                base_url="https://openrouter.ai/api/v1",
+            )
+
+    def _log_debug(self, player_name: str, turn_number: int, phase: str, prompt: str, response: str):
         if not self.log_dir:
             return
             
@@ -98,7 +106,7 @@ class UnifiedLLMClient:
             pass # Keep raw if any parse error during logging
 
         with open(filename, "a", encoding="utf-8") as f:
-            f.write(f"\n--- Turn {turn_number} ---\nPROMPT:\n{prompt}\n\nRESPONSE:\n{log_response}\n\n" + "-"*80 + "\n")
+            f.write(f"\n--- {phase} {turn_number} ---\nPROMPT:\n{prompt}\n\nRESPONSE:\n{log_response}\n\n" + "-"*80 + "\n")
 
     def _parse_and_validate(self, response_text: str) -> TurnOutput:
         """Attempts to parse JSON from the response and validate against TurnOutput schema."""
@@ -207,19 +215,14 @@ class UnifiedLLMClient:
             print(f"CLI Error ({command}): {e.stderr}")
             raise e
 
-    def generate_turn(self, player_name: str, provider: str, model_name: str, system_prompt: str, turn_prompt: str, turn_number: int) -> TurnOutput:
-        
-        # TOGGLE: Set to False to use the real API
-        USE_CLI = True 
-        
+    def generate_turn(self, player_name: str, provider: str, model_name: str, system_prompt: str, turn_prompt: str, turn_number: int, phase: str = "Day", use_cli: bool = True) -> TurnOutput:
+
         full_prompt = f"{system_prompt}\n\n{turn_prompt}"
-        if USE_CLI:
-             full_prompt += "\n\nIMPORTANT: Return ONLY JSON object."
-        
+
         response_text = ""
 
         try:
-            if USE_CLI:
+            if use_cli:
                 # --- CLI MODE ---
                 cli_command = None
                 if provider == "openai":
@@ -283,6 +286,16 @@ class UnifiedLLMClient:
                     )
                     response_text = response.choices[0].message.content
 
+                elif provider == "openrouter":
+                    response = self.openrouter_client.chat.completions.create(
+                        model=model_name,
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": turn_prompt},
+                        ],
+                    )
+                    response_text = response.choices[0].message.content
+
                 elif provider == "anthropic":
                     response = self.anthropic_client.messages.create(
                         model=model_name,
@@ -311,12 +324,12 @@ class UnifiedLLMClient:
                     raise ValueError(f"Unknown provider: {provider}")
 
             # Debug Log
-            self._log_debug(player_name, turn_number, full_prompt, response_text)
+            self._log_debug(player_name, turn_number, phase, full_prompt, response_text)
 
             # Parse
             return self._parse_and_validate(response_text)
 
         except Exception as e:
             # Log the failure too
-            self._log_debug(player_name, turn_number, full_prompt, f"ERROR: {str(e)}")
+            self._log_debug(player_name, turn_number, phase, full_prompt, f"ERROR: {str(e)}")
             raise e

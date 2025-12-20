@@ -12,22 +12,34 @@ AUTO_CONTINUE = True # Set to True to run without user intervention
 MEMORY_ENABLED = False # Set to True to enable distinct memories per player from previous games
 
 # Config for Roster (with TTS voices)
+# active: True = participates in game, False = disabled
+# use_cli: True = CLI tool, False = API
 ROSTER_CONFIG = [
+    # OPENAI
+    {"active": False, "use_cli": True, "name": "Rick", "provider": "openai", "model": "gpt-5.2", "voice": "en-US-GuyNeural"},
+    {"active": False, "use_cli": True, "name": "Morty", "provider": "openai", "model": "gpt-5.1", "voice": "en-US-ChristopherNeural"},
+
     # ANTHROPIC
-    {"name": "Haiku", "provider": "anthropic", "model": "haiku", "voice": "en-GB-RyanNeural"},
-    {"name": "Sonnet", "provider": "anthropic", "model": "sonnet", "voice": "en-AU-WilliamNeural"},
+    {"active": True, "use_cli": True, "name": "Haiku", "provider": "anthropic", "model": "haiku", "voice": "en-GB-RyanNeural"},
+    {"active": False, "use_cli": True, "name": "Sonnet", "provider": "anthropic", "model": "sonnet", "voice": "en-AU-WilliamNeural"},
+    {"active": False, "use_cli": True, "name": "Opus", "provider": "anthropic", "model": "opus", "voice": "en-US-GuyNeural"},
+
+    # OPENROUTER (API only)
+    {"active": True, "use_cli": False, "name": "Chimera", "provider": "openrouter", "model": "tngtech/deepseek-r1t2-chimera:free", "voice": "en-AU-WilliamNeural"},
+    {"active": True, "use_cli": False, "name": "Deepseek", "provider": "openrouter", "model": "nex-agi/deepseek-v3.1-nex-n1:free", "voice": "en-US-ChristopherNeural"},
+    {"active": True, "use_cli": False, "name": "Devstral", "provider": "openrouter", "model": "mistralai/devstral-2512:free", "voice": "en-CA-LiamNeural"},
 
     # GOOGLE
-    {"name": "Pro", "provider": "google", "model": "gemini-2.5-pro", "voice": "en-NZ-MitchellNeural"},
-    {"name": "Flash", "provider": "google", "model": "gemini-2.5-flash", "voice": "en-IE-ConnorNeural"},
-    {"name": "Preview", "provider": "google", "model": "gemini-3-flash-preview", "voice": "en-CA-LiamNeural"},
+    {"active": True, "use_cli": True, "name": "Pro", "provider": "google", "model": "gemini-2.5-pro", "voice": "en-NZ-MitchellNeural"},
+    {"active": True, "use_cli": True, "name": "Flash", "provider": "google", "model": "gemini-2.5-flash", "voice": "en-IE-ConnorNeural"},
+    {"active": True, "use_cli": True, "name": "Preview", "provider": "google", "model": "gemini-3-flash-preview", "voice": "en-CA-LiamNeural"},
 
     # QWEN (via qwen CLI)
-    {"name": "Qwen", "provider": "qwen", "model": "coder-model", "voice": "en-ZA-LukeNeural"},
-    {"name": "Vision", "provider": "qwen", "model": "vision-model", "voice": "en-CA-LiamNeural"},
+    {"active": True, "use_cli": True, "name": "Qwen", "provider": "qwen", "model": "coder-model", "voice": "en-ZA-LukeNeural"},
+    {"active": False, "use_cli": True, "name": "Vision", "provider": "qwen", "model": "vision-model", "voice": "en-CA-LiamNeural"},
 
     # OLLAMA (local)
-    {"name": "Nemotron", "provider": "ollama", "model": "nemotron-3-nano:30b-cloud", "voice": "en-US-GuyNeural"},
+    {"active": False, "use_cli": True, "name": "Nemotron", "provider": "ollama", "model": "nemotron-3-nano:30b-cloud", "voice": "en-US-GuyNeural"},
 ]
 
 NARRATOR_VOICE = "en-US-AriaNeural"
@@ -85,6 +97,7 @@ class TTSEngine:
         self.enabled = enabled and EDGE_TTS_AVAILABLE
         self.rate = rate
         self._voice_map = {}  # player_name -> voice_id
+        self._name_cache = {}  # player_name -> cached audio path
         self._current_thread = None  # Track current TTS thread
         if enabled and not EDGE_TTS_AVAILABLE:
             print("[TTS] edge-tts not installed. Run: pip install edge-tts")
@@ -97,24 +110,83 @@ class TTSEngine:
         if self._current_thread and self._current_thread.is_alive():
             self._current_thread.join()
 
-    def speak(self, text: str, player_name: str = None, voice: str = None, background: bool = False):
-        """Speak text. If background=True, runs in background thread."""
+    def _get_cached_name(self, player_name: str) -> str:
+        """Get or create cached audio file for player name announcement."""
+        if player_name in self._name_cache:
+            path = self._name_cache[player_name]
+            if os.path.exists(path):
+                return path
+
+        # Generate and cache name audio in narrator voice
+        cache_dir = os.path.join(tempfile.gettempdir(), "mafia_tts_cache")
+        os.makedirs(cache_dir, exist_ok=True)
+        cache_path = os.path.join(cache_dir, f"name_{player_name}.mp3")
+
+        if not os.path.exists(cache_path):
+            try:
+                asyncio.run(self._generate_audio(f"{player_name}.", NARRATOR_VOICE, cache_path))
+            except Exception as e:
+                print(f"[TTS] Failed to cache name: {e}")
+                return None
+
+        self._name_cache[player_name] = cache_path
+        return cache_path
+
+    async def _generate_audio(self, text: str, voice: str, output_path: str):
+        """Generate audio file from text."""
+        communicate = edge_tts.Communicate(text, voice, rate=self.rate)
+        await communicate.save(output_path)
+
+    def speak(self, text: str, player_name: str = None, voice: str = None, background: bool = False, announce_name: bool = False):
+        """Speak text. If background=True, runs in background thread. If announce_name=True, plays cached name in narrator voice first."""
         if not self.enabled or not text or not text.strip():
             return
         use_voice = voice or self._voice_map.get(player_name, "en-US-AriaNeural")
 
         if background:
-            # Wait for any previous speech to finish first
             self.wait_for_speech()
-            # Start new speech in background
             self._current_thread = threading.Thread(
-                target=self._speak_sync, args=(text, use_voice), daemon=True
+                target=self._speak_with_name, args=(text, use_voice, player_name if announce_name else None), daemon=True
             )
             self._current_thread.start()
         else:
-            # Blocking speech
             self.wait_for_speech()
-            self._speak_sync(text, use_voice)
+            self._speak_with_name(text, use_voice, player_name if announce_name else None)
+
+    def _speak_with_name(self, text: str, voice: str, announce_player: str = None):
+        """Speak with optional name announcement in narrator voice first."""
+        try:
+            # Pre-generate main speech audio (strip markdown emphasis)
+            clean_text = text.replace("*", "")
+            with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
+                speech_path = f.name
+            asyncio.run(self._generate_audio(clean_text, voice, speech_path))
+
+            # Get name audio and concatenate if needed
+            if announce_player:
+                name_audio = self._get_cached_name(announce_player)
+                if name_audio and os.path.exists(name_audio):
+                    # Concatenate name + speech into single file for seamless playback
+                    with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
+                        combined_path = f.name
+                    with tempfile.NamedTemporaryFile(mode='w', suffix=".txt", delete=False) as f:
+                        f.write(f"file '{name_audio}'\nfile '{speech_path}'\n")
+                        list_path = f.name
+                    subprocess.run(
+                        ["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", list_path, "-c", "copy", combined_path],
+                        check=True, capture_output=True
+                    )
+                    os.unlink(list_path)
+                    subprocess.run(["afplay", combined_path], check=True)
+                    os.unlink(combined_path)
+                    os.unlink(speech_path)
+                    return
+
+            # No name announcement - just play speech
+            subprocess.run(["afplay", speech_path], check=True)
+            os.unlink(speech_path)
+        except Exception as e:
+            print(f"[TTS Error] {e}")
 
 
     def _speak_sync(self, text: str, voice: str):
@@ -184,8 +256,8 @@ class GameEngine:
         player = next((p for p in self.players if p.state.name == actor), None)
         if player:
             idx = self.players.index(player) + 1
-            actor_display = f"{idx}. {actor}"
-            
+            actor_display = f"{idx}. {actor}:"
+
             # Add Mafia Icon for terminal display only
             if player.state.role == "Mafia":
                 actor_display = f"👺 {actor_display}"
@@ -252,18 +324,17 @@ class GameEngine:
 
     def setup_game(self):
         self._print("Initializing Game...")
-        
-        # 1. Randomize Roster Order
-        roster = list(ROSTER_CONFIG)
+
+        # 1. Filter active players and randomize order
+        roster = [p for p in ROSTER_CONFIG if p.get("active", True)]
         random.shuffle(roster)
 
-        # 2. Assign Roles (2 Mafia, 6 Villagers)
-        # Since roster is shuffled, we can just pick indices 0 and 1 for Mafia?
-        # Or shuffle roles separately?
-        # Let's shuffle indices to be safe/explicit.
-        indices = list(range(8))
-        # random.shuffle(indices) -> actually we just need 2 random indices
-        mafia_indices = set(random.sample(range(8), 2))
+        player_count = len(roster)
+        if player_count < 3:
+            raise ValueError(f"Need at least 3 active players, got {player_count}")
+
+        # 2. Assign Roles (2 Mafia, rest Villagers)
+        mafia_indices = set(random.sample(range(player_count), 2))
 
         mafia_names = []
         
@@ -278,6 +349,7 @@ class GameEngine:
                 model_name=config["model"],
                 client=self.client,
                 player_index=i+1,
+                use_cli=config.get("use_cli", True),
                 memory_enabled=MEMORY_ENABLED
             )
             self.players.append(p)
@@ -298,11 +370,26 @@ class GameEngine:
                     p.set_partner(partner[0])
 
         self._print(f"[System] Game Initialized. Mafia are: {', '.join(mafia_names)}")
-        self.log("Setup", "System", "GameStart", "Game Initialized. Roles have been assigned.")
-        self.log("Setup", "System", "MafiaReveal", f"The Mafia team is: {', '.join(mafia_names)}", is_secret=True)
+        self.log("Setup", "System", "MafiaReveal", f"Mafia: {', '.join(mafia_names)}", is_secret=True)
 
     def _get_living_players(self) -> List[Player]:
         return [p for p in self.players if p.state.is_alive]
+
+    def _pause_game(self, listener):
+        """Handle pause state - wait for SPACE to resume"""
+        self._print("\n[PAUSED] Press SPACE to resume...")
+        while True:
+            if listener.check_for_space():
+                self._print("[RESUMED]")
+                return
+            time.sleep(0.1)
+
+    def _wait_for_speech_with_pause(self, listener):
+        """Wait for TTS to finish while checking for SPACE to pause"""
+        while self.tts._current_thread and self.tts._current_thread.is_alive():
+            if listener and listener.check_for_space():
+                self._pause_game(listener)
+            time.sleep(0.1)
 
     def _wait_for_next(self, listener=None):
         if AUTO_CONTINUE:
@@ -310,13 +397,8 @@ class GameEngine:
             steps = 20  # 2 seconds / 0.1s
             for _ in range(steps):
                 if listener and listener.check_for_space():
-                    self._print("\n[PAUSED] Press SPACE to resume...")
-                    # Wait for resume
-                    while True:
-                        if listener.check_for_space():
-                            self._print("[RESUMED]")
-                            return # Break sleep and continue immediately
-                        time.sleep(0.1)
+                    self._pause_game(listener)
+                    return
                 time.sleep(0.1)
             return
         input("\n[PRESS ENTER TO CONTINUE NEXT ACTION] >> ")
@@ -352,7 +434,7 @@ class GameEngine:
                 # --- DAY PHASE ---
                 self.state.phase = "Day"
     
-                self.log("Day", "System", "PhaseStart", f"--- DAY {self.state.turn} START ---")
+                self.log("Day", "System", "PhaseStart", f"Day {self.state.turn}")
                 self._announce(f"Day {self.state.turn} begins")
                 
                 # Determine Speaking Order (Rotate based on Day)
@@ -368,7 +450,7 @@ class GameEngine:
                 # Track nominations (suggestions)
                 nominations = {} # PlayerName -> VoteTarget
     
-                self.log("Day", "System", "Info", f"Alive (Speak Order): {', '.join(p.state.name for p in ordered_living)}")
+                self.log("Day", "System", "Info", f"Order: {', '.join(p.state.name for p in ordered_living)}")
 
 
     
@@ -378,8 +460,8 @@ class GameEngine:
                         output = player.take_turn(self.state, self.state.turn)
     
                         # Wait for previous TTS before displaying new output
-                        self.tts.wait_for_speech()
-    
+                        self._wait_for_speech_with_pause(listener)
+
                         prefix = "👺 " if player.state.role == "Mafia" else ""
                         if output.strategy:
                             self._print(f"\n💭 {prefix}{player.state.name} Strategy: {output.strategy}")
@@ -390,7 +472,7 @@ class GameEngine:
     
                         # Capture nomination if present (Day 2+)
                         spoken_action = ""
-                        if self.state.turn > 1 and output.vote:
+                        if self.state.turn > 1 and output.vote and output.vote not in ("null", "None", "skip", "Skip"):
                              nominations[player.state.name] = output.vote
                              action_part = f"[Nominated {output.vote}] "
                              spoken_action = f"{player.state.name} nominates {output.vote}."
@@ -401,7 +483,7 @@ class GameEngine:
                         # Start TTS in background with speech + nomination
                         tts_text = f"{speech} {spoken_action}".strip() if speech else spoken_action
                         if tts_text:
-                            self.tts.speak(tts_text, player.state.name, background=True)
+                            self.tts.speak(tts_text, player.state.name, background=True, announce_name=True)
     
                     except Exception as e:
                         self.log("Day", player.state.name, "error", f"Failed to speak: {e}")
@@ -431,7 +513,7 @@ class GameEngine:
                         self._print(f"\n🛡️  DEFENSE PHASE 🛡️")
                         
                         nominee_display = [f"{n} ({nominee_counts[n]})" for n in nominees]
-                        self.log("Defense", "System", "PhaseStart", f"Nominees for elimination: {', '.join(nominee_display)}")
+                        self.log("Defense", "System", "PhaseStart", f"Nominees: {', '.join(nominee_display)}")
                         self._announce(f"Nominees for elimination are: {', '.join(nominee_display)}")
 
                         # Sort nominees by day speaking order
@@ -444,9 +526,9 @@ class GameEngine:
                             try:
                                 # Generate while previous TTS might still be playing
                                 output = nom_player.take_turn(self.state, self.state.turn)
-    
+
                                 # Wait for previous TTS before displaying
-                                self.tts.wait_for_speech()
+                                self._wait_for_speech_with_pause(listener)
 
                                 if output.strategy:
                                     self._print(f"\n💭 {nom_player.state.name} Strategy: {output.strategy}")
@@ -454,14 +536,14 @@ class GameEngine:
     
                                 # TTS for defense speech in background
                                 if output.speech:
-                                    self.tts.speak(output.speech, nom_player.state.name, background=True)
+                                    self.tts.speak(output.speech, nom_player.state.name, background=True, announce_name=True)
                             except Exception as e:
                                 self._print(f"Error defending: {e}")
     
                             # User can press Enter while TTS plays
                             self._wait_for_next(listener)
                     else:
-                        self.log("Day", "System", "Info", "No valid nominations. Skipping Defense.")
+                        self.log("Day", "System", "Info", "No nominations")
     
                     # --- VOTING PHASE ---
                     # Wait for any remaining Defense TTS
@@ -473,8 +555,7 @@ class GameEngine:
                     living_count = len([p for p in living])
                     candidates_str = ", ".join(nominees) if nominees else "everyone (since no nominations)"
                     
-                    self.log("Voting", "System", "Info", f"There are {living_count} voters.")
-                    self.log("Voting", "System", "Info", f"Valid Candidates for Elimination: {candidates_str}")
+                    self.log("Voting", "System", "Info", f"{living_count} voters. Candidates: {candidates_str}")
 
                     self._announce("It is voting time.")
 
@@ -486,10 +567,10 @@ class GameEngine:
                             # Generate while previous TTS might still be playing
                             output = player.take_turn(self.state, self.state.turn)
                             vote_target = output.vote
-    
+
                             # Wait for previous TTS before displaying
-                            self.tts.wait_for_speech()
-    
+                            self._wait_for_speech_with_pause(listener)
+
                             prefix = "👺 " if player.state.role == "Mafia" else ""
                             if output.strategy:
                                 self._print(f"\n💭 {prefix}{player.state.name} Strategy: {output.strategy}")
@@ -509,18 +590,18 @@ class GameEngine:
     
                             # Log the vote
                             if vote_target:
-                                self.log("Voting", player.state.name, "vote", f"[Voted for {vote_target}]")
+                                self.log("Voting", player.state.name, "vote", f"[Vote: {vote_target}]")
                                 # TTS for vote announcement
                                 self.tts.speak(f"{player.state.name} votes for {vote_target}.", player.state.name, background=True)
                             else:
                                 # Log as absent/abstain with square brackets
-                                self.log("Voting", player.state.name, "vote", "[Abstained]")
+                                self.log("Voting", player.state.name, "vote", "[Abstain]")
                                 self.tts.speak(f"{player.state.name} abstains.", player.state.name, background=True)
     
                         except Exception as e:
                             self._print(f"Error voting: {e}")
                             final_votes[player.state.name] = None
-                            self.log("Voting", player.state.name, "vote", "[Abstained]")
+                            self.log("Voting", player.state.name, "vote", "[Abstain]")
     
                         # User can press Enter while TTS plays
                         self._wait_for_next(listener)
@@ -535,12 +616,12 @@ class GameEngine:
                     self.tts.wait_for_speech()
                     tally_parts = [f"{k} ({v})" for k,v in votes.items()]
                     tally_str = ", ".join(tally_parts) if tally_parts else "No votes"
-                    self.log("Voting", "System", "VoteSummary", f"Votes Cast: {tally_str}")
+                    self.log("Voting", "System", "VoteSummary", f"Votes: {tally_str}")
                     self._announce(f"Votes Cast: {tally_str}")
 
     
                     if not votes:
-                        self.log("Result", "System", "NoLynch", "No votes cast.")
+                        self.log("Result", "System", "NoLynch", "No votes")
                     else:
                         target, count = max(votes.items(), key=lambda x: x[1])
                         max_votes = count
@@ -548,7 +629,7 @@ class GameEngine:
                         victims_names = [k for k, v in votes.items() if v == max_votes]
                         
                         if len(victims_names) > 1:
-                            self.log("Result", "System", "Tie", f"Tie between {', '.join(victims_names)}. ALL will be eliminated!")
+                            self.log("Result", "System", "Tie", f"Tie: {', '.join(victims_names)}. All eliminated.")
                             self._announce("There is a tie. All tied players will be eliminated")
                         
                         # Process deaths
@@ -558,13 +639,11 @@ class GameEngine:
                             
                             # Execute Kill
                             victim.state.is_alive = False
-                            self.log("Result", "System", "Death", f"{v_name} was HANGED by the town!")
+                            self.log("Result", "System", "Death", f"{v_name} HANGED")
                             self._announce(f"{v_name} has been hanged by the town")
                             self._print(f"💀💀💀 {v_name} IS DEAD 💀💀💀")
-                            self.log("Result", "System", "Info", f"{v_name} is dead.")
                             role_emoji = "👺" if victim.state.role == "Mafia" else "👤"
                             self.log("Result", "System", "RoleReveal", f"{role_emoji} {v_name} was a {victim.state.role}!")
-                            self._announce(f"{v_name} was a {victim.state.role}")
 
                 self._wait_for_next(listener)
     
@@ -577,7 +656,7 @@ class GameEngine:
     
                 # --- NIGHT PHASE ---
                 self.state.phase = "Night"
-                self.log("Night", "System", "PhaseStart", f"--- NIGHT {self.state.turn} START ---")
+                self.log("Night", "System", "PhaseStart", f"Night {self.state.turn}")
                 self._announce(f"Night {self.state.turn} begins")
     
                 mafia_alive = [p for p in self._get_living_players() if p.state.role == "Mafia"]
@@ -586,16 +665,16 @@ class GameEngine:
                     # Game over loop will catch this next iter
                     pass
                 else:
-                    self.log("Night", "System", "MafiaWake", "The Mafia wakes up...", is_secret=True)
+                    self.log("Night", "System", "MafiaWake", "Mafia awake", is_secret=True)
                     
                     mafia_votes = {}
                     for m_player in mafia_alive:
                         try:
                             # Generate while previous TTS might still be playing
                             output = m_player.take_turn(self.state, self.state.turn)
-    
+
                             # Wait for previous TTS before displaying
-                            self.tts.wait_for_speech()
+                            self._wait_for_speech_with_pause(listener)
 
                             if output.strategy:
                                 self._print(f"\n💭 👺 {m_player.state.name} Strategy: {output.strategy}")
@@ -610,7 +689,7 @@ class GameEngine:
                             speech = output.speech or ""
                             tts_text = f"{speech} {spoken_action}".strip() if speech else spoken_action
                             if tts_text:
-                                self.tts.speak(tts_text, m_player.state.name, background=True)
+                                self.tts.speak(tts_text, m_player.state.name, background=True, announce_name=True)
     
                             if target:
                                 mafia_votes[target] = mafia_votes.get(target, 0) + 1
@@ -623,7 +702,7 @@ class GameEngine:
                     # Consensus Summary
                     tally_parts = [f"{k} ({v})" for k,v in mafia_votes.items()]
                     tally_str = ", ".join(tally_parts) if tally_parts else "No votes"
-                    self.log("Night", "System", "VoteSummary", f"Mafia Votes: {tally_str}", is_secret=True)
+                    self.log("Night", "System", "VoteSummary", f"Votes: {tally_str}", is_secret=True)
     
                     # Wait for last mafia TTS to finish before summary
                     self.tts.wait_for_speech()
@@ -635,7 +714,7 @@ class GameEngine:
                         if len(winners) > 1:
                             import random
                             kill_target = random.choice(winners)
-                            self.log("Night", "System", "TieBreak", f"Mafia Tie {winners}. Randomly chose: {kill_target}", is_secret=True)
+                            self.log("Night", "System", "TieBreak", f"Tie {winners}. Random: {kill_target}", is_secret=True)
                         else:
                             kill_target = winners[0]
     
@@ -643,13 +722,13 @@ class GameEngine:
                         if kill_target in self.active_players and self.active_players[kill_target].state.is_alive:
                             victim = self.active_players[kill_target]
                             victim.state.is_alive = False
-                            self.log("Night", "System", "Kill", f"The Mafia killed {kill_target}")
+                            self.log("Night", "System", "Kill", f"Mafia killed {kill_target}")
                             self._print(f"\n🩸 TRAGEDY! {kill_target} was found DEAD in the morning.🩸")
                             self._announce(f"{kill_target} was killed during the night")
                         else:
-                             self.log("Night", "System", "Fail", "Mafia targeted invalid player.")
+                             self.log("Night", "System", "Fail", "Invalid target")
                     else:
-                         self.log("Night", "System", "Quiet", "Mafia did not kill anyone.")
+                         self.log("Night", "System", "Quiet", "No kill")
     
                 self._wait_for_next(listener)
                 self.state.turn += 1

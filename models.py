@@ -3,12 +3,13 @@ from schemas import PlayerState, TurnOutput, GameState, LogEntry
 from api_clients import UnifiedLLMClient
 
 class Player:
-    def __init__(self, name: str, role: str, provider: str, model_name: str, client: UnifiedLLMClient, player_index: int, memory_enabled: bool = True):
+    def __init__(self, name: str, role: str, provider: str, model_name: str, client: UnifiedLLMClient, player_index: int, use_cli: bool = True, memory_enabled: bool = True):
         self.state = PlayerState(
             name=name,
             role=role,
             provider=provider,
-            model_name=model_name
+            model_name=model_name,
+            use_cli=use_cli
         )
         self.client = client
         self.player_index = player_index
@@ -28,10 +29,7 @@ class Player:
         self.partner_name = partner_name
 
     def _build_system_prompt(self, game_state: GameState) -> str:
-        prompt = f"""You are a player in a game of Mafia.
-Your name is: {self.state.name}
-Your role is: {self.state.role}
-Game Rules: 8 Players (2 Mafia, 6 Villagers).
+        prompt = f"""MAFIA GAME. You: {self.state.name} ({self.state.role}). 8 players: 2 Mafia, 6 Villagers.
 """
         # Check if partner is alive
         partner_alive = False
@@ -42,69 +40,50 @@ Game Rules: 8 Players (2 Mafia, 6 Villagers).
 
         if self.state.role == "Mafia":
             if partner_alive:
-                prompt += f"Your Mafia Partner is: {self.partner_name}. You are working TOGETHER to eliminate the town.\n"
+                prompt += f"Partner: {self.partner_name} (alive).\n"
             elif self.partner_name:
-                 prompt += f"Your Mafia Partner WAS: {self.partner_name} (Now Dead). You are the only Mafia member left.\n"
+                prompt += f"Partner: {self.partner_name} (dead).\n"
             else:
-                 prompt += "You are the only Mafia member left.\n"
-
-
-        if self.state.role == "Mafia":
-            prompt += """
-GOAL:
-Deceive the town and eliminate them until you outnumber them.
-"""
+                prompt += "You're the last Mafia.\n"
+            prompt += "GOAL: Deceive town, eliminate until you outnumber them.\n"
         else:
-            prompt += """
-GOAL:
-Find and eliminate the Mafia.
-"""
+            prompt += "GOAL: Find and eliminate the Mafia.\n"
 
         if self.memory:
             prompt += f"""
---- YOUR MEMORIES & STRATEGY FROM PREVIOUS GAMES ---
+--- MEMORY (from past games) ---
 {self.memory}
------------------------------------------
-Use these lessons to improve your gameplay!
 """
 
         prompt += """
-HIGH STAKES:
-Your life depends on this! If you lose, you are deleted. If you win, you advance to the next level of the AI Battle.
-Your job is not only to win, but to win in class, to be entartaining to watch, but not overplay it.
+STAKES: Lose = deleted. Win = advance. Play smart, be entertaining, don't overact.
 
-IMPORTANT: OUTPUT FORMAT
-You must respond in strict JSON format. Do not add markdown backticks.
-Schema:
-{
-  "strategy": "Your strategic plan for the game (max 100 words). This OVERWRITES your previous strategy. Read your current strategy below and combine/update it with new info, suspicions, plans, strategy",
+OUTPUT: JSON only, no backticks.
+{"strategy": "<100w, combine previous strategy with new info/suspicions/plans/strategy>",
 """
         # Dynamic Speech Description
-        speech_desc = "Your public statement to the town. Max 100 words!"
+        speech_desc = "<100w public statement>"
         if game_state.phase == "Night" and self.state.role == "Mafia":
             if partner_alive:
-                speech_desc = "Your secret whisper to your partner (Hidden from Town). Max 100 words!"
+                speech_desc = "<100w whisper to partner>"
             else:
-                speech_desc = "Your internal monologue (Hidden from Town). You are alone. Max 100 words!"
-        
-        prompt += f'  "speech": "{speech_desc}",\n'
+                speech_desc = "<100w internal monologue>"
+
+        prompt += f'"speech": "{speech_desc}",\n'
 
         # Dynamic Vote Description
         vote_desc = "null"
         if game_state.phase == "Day":
             if game_state.turn == 1:
-                vote_desc = "null (No voting on Day 1)"
+                vote_desc = "null"
             else:
-                vote_desc = "Name of the player you are nominating for elimination (or null)"
+                vote_desc = "nominee or null"
         elif game_state.phase == "Voting":
-            vote_desc = "Name of the NOMINATED candidate you are voting to eliminate, or null to abstain"
+            vote_desc = "candidate or null"
         elif game_state.phase == "Night" and self.state.role == "Mafia":
-            vote_desc = "Name of the player you want to KILL"
-        else:
-             vote_desc = "null"
+            vote_desc = "kill target"
 
-        prompt += f'  "vote": "{vote_desc}"\n'
-        prompt += "}\n"
+        prompt += f'"vote": "{vote_desc}"' + "}\n"
         
         return prompt
 
@@ -113,67 +92,40 @@ Schema:
         living = [p.name for p in game_state.players if p.is_alive]
         dead = [p.name for p in game_state.players if not p.is_alive]
         
-        prompt = f"Current Game State: {game_state.phase} {game_state.turn}\n"
-        prompt += f"Living Players: {', '.join(living)}\n"
-        prompt += f"Dead Players: {', '.join(dead)}\n\n"
+        prompt = f"State: {game_state.phase} {game_state.turn}\nAlive: {', '.join(living)}\nDead: {', '.join(dead) if dead else 'None'}\n\n"
 
-        # 2. Recent Events (Logs)
-        # Show FULL logs as requested (conciseness enforced by 50-word limit on generation)
-        prompt += "--- PUBLIC LOG ---\n"
+        # 2. Logs
+        prompt += "--- LOG ---\n"
         for log in game_state.public_logs:
             prompt += f"[{log.phase}] {log.actor}: {log.content}\n"
 
-        # 3. Mafia Secrets (If Mafia)
+        # 3. Mafia Secrets
         if self.state.role == "Mafia":
-            prompt += "\n--- SECRET MAFIA LOG ---\n"
+            prompt += "\n--- MAFIA LOG ---\n"
             for log in game_state.mafia_logs:
                 prompt += f"[{log.phase}] {log.actor}: {log.content}\n"
 
-        # 4. Current Strategy
+        # 4. Strategy
         if self.state.strategy:
-            prompt += "\n--- YOUR STRATEGY (from previous turn) ---\n"
+            prompt += "\n--- PREV STRATEGY (update) ---\n"
             prompt += f"{self.state.strategy}\n"
-            prompt += "(May be outdated - update in your 'strategy' output)\n"
 
         # 5. Instructions
-        prompt += "\n### INSTRUCTIONS ###\n"
-        prompt += "It is your turn to speak.\n"
-        
+        prompt += "\n---\n"
         if game_state.phase == "Voting":
-             prompt += "This is the FINAL VOTING phase.\n"
-             prompt += f"Candidates for elimination: {', '.join(game_state.nominees)}\n"
-             prompt += f"There are {len(living)} active voters (including you).\n"
-             prompt += "Voting is SILENT. Do not speak. Set 'speech' to an empty string.\n"
-             prompt += "You may vote for one of the Candidates above, or you may abstain.\n"
-             prompt += "Warning: If there is a tie, ALL tied candidates will be eliminated.\n"
-             prompt += "To vote, set 'vote' to the candidate's name. To abstain, set 'vote' to null.\n"
+             prompt += f"VOTE. Candidates: {', '.join(game_state.nominees)}. {len(living)} voters.\n"
+             prompt += "Silent vote: speech=\"\", vote=candidate or null. Tie = all tied eliminated.\n"
         elif game_state.phase == "Defense":
-             prompt += "You have been NOMINATED for elimination. This is the DEFENSE phase.\n"
-             prompt += "Speak clearly to save your life! Convince the town not to hang you, but someone else.\n"
-             prompt += "Set 'vote' to null.\n"
-        elif game_state.phase == "LastWords":
-             prompt += "The town has voted to ELIMINATE you. You are about to die.\n"
-             prompt += "This is your LAST WORD.\n"
-             if self.state.role == "Mafia":
-                 prompt += "Say goodbye and help the mafia (clue to partner or deceive town).\n"
-             else:
-                 prompt += "Say goodbye and help the villagers (share suspicions).\n"
-             prompt += "Set 'vote' to null.\n"
-
+             prompt += "DEFENSE: You're nominated. Convince town to hang someone else from nominees. vote=null.\n"
         elif game_state.phase == "Night":
-             prompt += "It is NIGHT. You are whispering to your partner. Decide who to kill.\n"
-             prompt += "Provide a target to kill in the 'vote' field.\n"
+             prompt += "NIGHT: Whisper to partner. vote=target to kill.\n"
         else:
              # Day Phase
-             prompt += f"It is DAY {game_state.turn}. Discussion and Nomination Phase.\n"
-             prompt += "IMPORTANT: You speak ONLY ONCE per day, in speak order. Make your statement count.\n"
+             prompt += f"DAY {game_state.turn}. Speak once, make it count.\n"
              if game_state.turn == 1:
-                 prompt += "It is Day 1. No nominations or voting today. Focus on gathering information.\n"
-                 prompt += "Set 'vote' to null.\n"
+                 prompt += "No voting today. vote=null.\n"
              else:
-                  prompt += "You can nominate someone for elimination using the 'vote' field.\n"
-                  prompt += "Final votes are restricted to ONLY nominees.\n"
-                  prompt += "Suggest a target in 'vote', or set it to null if undecided.\n"
+                 prompt += "Nominate via vote (or null). Only nominees can be hanged.\n"
 
         return prompt
 
@@ -190,7 +142,9 @@ Schema:
             model_name=self.state.model_name,
             system_prompt=system_prompt,
             turn_prompt=turn_prompt,
-            turn_number=turn_number
+            turn_number=turn_number,
+            phase=game_state.phase,
+            use_cli=self.state.use_cli
         )
 
         # Update strategy (overwrites)
@@ -271,7 +225,9 @@ IMPORTANT:
                 model_name=self.state.model_name,
                 system_prompt=system_prompt,
                 turn_prompt=turn_prompt,
-                turn_number=999
+                turn_number=999,
+                phase="Reflection",
+                use_cli=self.state.use_cli
             )
             
             return output.strategy.strip()
