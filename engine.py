@@ -146,52 +146,74 @@ class TTSEngine:
         """Speak text. If background=True, runs in background thread. If announce_name=True, plays cached name in narrator voice first."""
         if not self.enabled or not text or not text.strip():
             return
+        
+        path = self.prepare_speech(text, player_name, voice, announce_name)
+        if path:
+            self.play_file(path, background)
+
+    def prepare_speech(self, text: str, player_name: str = None, voice: str = None, announce_name: bool = False) -> str:
+        """Generate audio file and return path. Blocks until generation complete."""
+        if not self.enabled or not text or not text.strip():
+            return None
+            
         use_voice = voice or self._voice_map.get(player_name, "en-US-AriaNeural")
-
-        if background:
-            self.wait_for_speech()
-            self._current_thread = threading.Thread(
-                target=self._speak_with_name, args=(text, use_voice, player_name if announce_name else None), daemon=True
-            )
-            self._current_thread.start()
-        else:
-            self.wait_for_speech()
-            self._speak_with_name(text, use_voice, player_name if announce_name else None)
-
-    def _speak_with_name(self, text: str, voice: str, announce_player: str = None):
-        """Speak with optional name announcement in narrator voice first."""
         try:
-            # Pre-generate main speech audio (strip markdown emphasis)
+             # Pre-generate main speech audio (strip markdown emphasis)
             clean_text = text.replace("*", "")
             with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
                 speech_path = f.name
-            asyncio.run(self._generate_audio(clean_text, voice, speech_path))
+            asyncio.run(self._generate_audio(clean_text, use_voice, speech_path))
 
             # Get name audio and concatenate if needed
-            if announce_player:
-                name_audio = self._get_cached_name(announce_player)
-                if name_audio and os.path.exists(name_audio):
-                    # Concatenate name + speech into single file for seamless playback
+            if announce_name and player_name:
+                name_audio = self._get_cached_name(player_name)
+                if name_audio:
+                     # Concatenate name + speech
                     with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
                         combined_path = f.name
-                    with tempfile.NamedTemporaryFile(mode='w', suffix=".txt", delete=False) as f:
-                        f.write(f"file '{name_audio}'\nfile '{speech_path}'\n")
-                        list_path = f.name
+                    
+                    list_path = speech_path + ".list"
+                    with open(list_path, "w") as f:
+                         f.write(f"file '{name_audio}'\nfile '{speech_path}'")
+                    
                     subprocess.run(
                         ["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", list_path, "-c", "copy", combined_path],
                         check=True, capture_output=True
                     )
                     os.unlink(list_path)
-                    subprocess.run(["afplay", combined_path], check=True)
-                    os.unlink(combined_path)
-                    os.unlink(speech_path)
-                    return
+                    os.unlink(speech_path) # Delete original speech part
+                    return combined_path
 
-            # No name announcement - just play speech
-            subprocess.run(["afplay", speech_path], check=True)
-            os.unlink(speech_path)
+            return speech_path
+
         except Exception as e:
-            print(f"[TTS Error] {e}")
+            print(f"[TTS Error in prepare] {e}")
+            return None
+
+    def play_file(self, path: str, background: bool = False):
+        """Play an existing audio file"""
+        if background:
+            self.wait_for_speech()
+            self._current_thread = threading.Thread(
+                target=self._play_file_sync, args=(path,), daemon=True
+            )
+            self._current_thread.start()
+        else:
+            self.wait_for_speech()
+            self._play_file_sync(path)
+
+    def _play_file_sync(self, path: str):
+        try:
+            subprocess.run(["afplay", path], check=True)
+        except Exception as e:
+            print(f"[TTS Play Error] {e}")
+        finally:
+            if os.path.exists(path):
+                os.unlink(path)
+
+    def _speak_with_name(self, text: str, voice: str, announce_player: str = None):
+         # Deprecated
+         pass
 
 
     def _speak_sync(self, text: str, voice: str):
@@ -255,7 +277,7 @@ class GameEngine:
         """Speak system announcement with narrator voice"""
         self.tts.speak(text, voice=NARRATOR_VOICE, background=background)
 
-    def log(self, phase: str, actor: str, action: str, content: str, is_secret: bool = False, vote_target: str = None):
+    def log(self, phase: str, actor: str, action: str, content: str, is_secret: bool = False, vote_target: str = None, target_log: str = None):
         # Determine display name with number if actor is a player
         actor_display = actor
         player = next((p for p in self.players if p.state.name == actor), None)
@@ -263,9 +285,11 @@ class GameEngine:
             idx = self.players.index(player) + 1
             actor_display = f"{idx}. {actor}:"
 
-            # Add Mafia Icon for terminal display only
+            # Add Mafia/Cop Icon for terminal display only
             if player.state.role == "Mafia":
                 actor_display = f"👺 {actor_display}"
+            elif player.state.role == "Cop":
+                actor_display = f"👮 {actor_display}"
 
         # Append vote text to content for persistent history
         if vote_target:
@@ -317,7 +341,26 @@ class GameEngine:
         # This prevents the "sun/moon on every line" issue.
         
         if is_secret:
-            self.state.mafia_logs.append(entry)
+            # Route secret logs to correct private log based on actor/context
+            
+            # Explicit override
+            if target_log == "Cop":
+                 self.state.cop_logs.append(entry)
+            elif target_log == "Mafia":
+                 self.state.mafia_logs.append(entry)
+            
+            # Auto-detect Cop actions
+            elif (player and player.state.role == "Cop") or action == "investigate":
+                 self.state.cop_logs.append(entry)
+            
+            # Auto-detect Cop System logs
+            elif str(content).startswith("Investigation Result") or str(content).startswith("Investigation failed"):
+                 self.state.cop_logs.append(entry)
+            
+            # Default: Mafia (including System messages for Night phase calls)
+            else:
+                 self.state.mafia_logs.append(entry)
+
             display_content = content.replace("[Nominated", "[👉 Nominated").replace("[Suggests killing", "[🔪 Suggests killing").replace("[Defense]", "[🛡️ Defense]").replace("votes guilty", "👎 votes guilty").replace("votes innocent", "👍 votes innocent").replace("abstains", "⏸️ abstains")
             self._print(f"\n{display_icon}{actor_display} {vote_str} {display_content}")
         else:
@@ -336,14 +379,25 @@ class GameEngine:
         if player_count < 3:
             raise ValueError(f"Need at least 3 active players, got {player_count}")
 
-        # 2. Assign Roles (2 Mafia, rest Villagers)
-        mafia_indices = set(random.sample(range(player_count), 2))
+        # 2. Assign Roles (2 Mafia, 1 Cop, rest Villagers)
+        # Ensure we have enough players for special roles
+        indices = list(range(player_count))
+        mafia_indices = set(random.sample(indices, 2))
+        
+        cop_index = -1
+        remaining_indices = [i for i in indices if i not in mafia_indices]
+        if remaining_indices:
+             cop_index = random.choice(remaining_indices)
 
         mafia_names = []
         
         # Create Players
         for i, config in enumerate(roster):
-            role = "Mafia" if i in mafia_indices else "Villager"
+            role = "Villager"
+            if i in mafia_indices:
+                role = "Mafia"
+            elif i == cop_index:
+                role = "Cop"
             
             p = Player(
                 name=config["name"],
@@ -373,7 +427,11 @@ class GameEngine:
                     p.set_partner(partner[0])
 
         self._print(f"[System] Game Initialized. Mafia are: {', '.join(mafia_names)}")
-        self.log("Setup", "System", "MafiaReveal", f"Mafia: {', '.join(mafia_names)}", is_secret=True)
+        self.log("Setup", "System", "MafiaReveal", f"Mafia: {', '.join(mafia_names)}", is_secret=True, target_log="Mafia")
+        
+        cop_names = [p.state.name for p in self.players if p.state.role == "Cop"]
+        if cop_names:
+             self.log("Setup", "System", "CopReveal", f"Cop: {cop_names[0]}", is_secret=True, target_log="Cop")
 
     def _get_living_players(self) -> List[Player]:
         return [p for p in self.players if p.state.is_alive]
@@ -499,35 +557,44 @@ class GameEngine:
 
     
                 for player in ordered_living:
+                    # Double-check aliveness just in case state drifted
+                    if not player.state.is_alive:
+                        self._print(f"[DEBUG] Skipping dead player {player.state.name} in speaking order.")
+                        continue
+
                     try:
                         # Generate while previous TTS might still be playing
                         output = player.take_turn(self.state, self.state.turn)
     
-                        # Wait for previous TTS before displaying new output
-                        self._wait_for_speech_with_pause(listener)
-
-                        prefix = "👺 " if player.state.role == "Mafia" else ""
-                        if output.strategy:
-                            self._print(f"\n💭 {prefix}{player.state.name} Strategy: {output.strategy}")
-
-                        # Construct content with bracketed action if present
+                        # Prepare TTS immediately (before waiting for previous to finish)
                         speech = output.speech or ""
-                        action_part = ""
-    
                         # Capture nomination if present (no nominations on Day 1)
                         spoken_action = ""
                         if self.state.turn > 1 and output.vote and output.vote not in ("null", "None", "skip", "Skip"):
                              nominations[player.state.name] = output.vote
-                             action_part = f"[Nominated {output.vote}] "
                              spoken_action = f"{player.state.name} nominates {output.vote}."
-    
+                        
+                        tts_text = f"{speech} {spoken_action}".strip() if speech else spoken_action
+                        audio_path = None
+                        if tts_text:
+                            # This blocks MAIN thread but runs while PREV TTS thread is playing
+                            audio_path = self.tts.prepare_speech(tts_text, player.state.name, announce_name=True)
+
+                        # Wait for previous TTS before displaying new output
+                        self._wait_for_speech_with_pause(listener)
+
+                        prefix = "👺 " if player.state.role == "Mafia" else ("👮 " if player.state.role == "Cop" else "")
+                        if output.strategy:
+                            self._print(f"\n💭 {prefix}{player.state.name} Strategy: {output.strategy}")
+
+                        # Construct content with bracketed action if present
+                        action_part = f"[Nominated {output.vote}] " if spoken_action else ""
                         content = f"{action_part}{speech}"
                         self.log("Day", player.state.name, "speak", content)
     
-                        # Start TTS in background with speech + nomination
-                        tts_text = f"{speech} {spoken_action}".strip() if speech else spoken_action
-                        if tts_text:
-                            self.tts.speak(tts_text, player.state.name, background=True, announce_name=True)
+                        # Play pre-generated audio
+                        if audio_path:
+                            self.tts.play_file(audio_path, background=True)
     
                     except Exception as e:
                         self.log("Day", player.state.name, "error", f"Failed to speak: {e}")
@@ -562,6 +629,7 @@ class GameEngine:
 
                         accused = self.active_players.get(accused_name)
                         if not accused or not accused.state.is_alive:
+                            self._print(f"[DEBUG] Skipping trial for {accused_name} (Dead or invalid).")
                             continue
 
                         # --- TRIAL PHASE ---
@@ -576,15 +644,22 @@ class GameEngine:
                         # 1. Defense - accused speaks
                         try:
                             output = accused.take_turn(self.state, self.state.turn)
+
+                            # Prepare TTS
+                            speech = output.speech or ""
+                            audio_path = None
+                            if speech:
+                                audio_path = self.tts.prepare_speech(speech, accused_name, announce_name=True)
+
                             self._wait_for_speech_with_pause(listener)
 
                             prefix = "👺 " if accused.state.role == "Mafia" else ""
                             if output.strategy:
                                 self._print(f"\n💭 {prefix}{accused_name} Strategy: {output.strategy}")
-                            self.log("Trial", accused_name, "speak", f"[Defense] {output.speech or ''}")
+                            self.log("Trial", accused_name, "speak", f"[Defense] {speech}")
 
-                            if output.speech:
-                                self.tts.speak(output.speech, accused_name, background=True, announce_name=True)
+                            if audio_path:
+                                self.tts.play_file(audio_path, background=True)
                         except Exception as e:
                             self._print(f"Error in defense: {e}")
 
@@ -599,6 +674,10 @@ class GameEngine:
                         voters = [p for p in self._get_living_players() if p.state.name != accused_name]
 
                         for voter in voters:
+                            # Safeguard
+                            if not voter.state.is_alive:
+                                continue
+
                             try:
                                 output = voter.take_turn(self.state, self.state.turn)
                                 self._wait_for_speech_with_pause(listener)
@@ -670,19 +749,18 @@ class GameEngine:
                     # Game over loop will catch this next iter
                     pass
                 else:
-                    self.log("Night", "System", "MafiaWake", "Mafia awake", is_secret=True)
+
+                    # --- MAFIA TURN ---
+                    self.log("Night", "System", "MafiaWake", "Mafia awake", is_secret=True, target_log="Mafia")
                     
+                    night_victim = None
                     mafia_votes = {}
                     for m_player in mafia_alive:
+                        if not m_player.state.is_alive:
+                             continue
                         try:
                             # Generate while previous TTS might still be playing
                             output = m_player.take_turn(self.state, self.state.turn)
-
-                            # Wait for previous TTS before displaying
-                            self._wait_for_speech_with_pause(listener)
-
-                            if output.strategy:
-                                self._print(f"\n💭 👺 {m_player.state.name} Strategy: {output.strategy}")
 
                             target = output.vote
                             # Normalize: strip "kill " prefix if LLM included it
@@ -690,14 +768,26 @@ class GameEngine:
                                 target = target[5:].strip()
                             action_tag = f"[Suggests killing {target}] " if target else ""
                             spoken_action = f"{m_player.state.name} suggests killing {target}." if target else ""
-                            content = f"{action_tag}{output.speech or ''}"
-                            self.log("Night", m_player.state.name, "whisper", content, is_secret=True)
-    
-                            # TTS for mafia whisper in background with kill suggestion
+                            
+                            # Prepare TTS
                             speech = output.speech or ""
                             tts_text = f"{speech} {spoken_action}".strip() if speech else spoken_action
+                            audio_path = None
                             if tts_text:
-                                self.tts.speak(tts_text, m_player.state.name, background=True, announce_name=True)
+                                 audio_path = self.tts.prepare_speech(tts_text, m_player.state.name, announce_name=True)
+
+                            # Wait for previous TTS before displaying
+                            self._wait_for_speech_with_pause(listener)
+
+                            if output.strategy:
+                                self._print(f"\n💭 👺 {m_player.state.name} Strategy: {output.strategy}")
+                            
+                            content = f"{action_tag}{output.speech or ''}"
+                            self.log("Night", m_player.state.name, "whisper", content, is_secret=True, target_log="Mafia")
+    
+                            # Play pre-generated audio
+                            if audio_path:
+                                self.tts.play_file(audio_path, background=True)
     
                             if target:
                                 mafia_votes[target] = mafia_votes.get(target, 0) + 1
@@ -705,15 +795,17 @@ class GameEngine:
                             self._print(f"Mafia Error: {e}")
     
                         # User can press Enter while TTS plays
-                        self._wait_for_next(listener)
+                        if m_player != mafia_alive[-1]:
+                             self._wait_for_next(listener)
     
                     # Consensus Summary
                     tally_parts = [f"{k} ({v})" for k,v in mafia_votes.items()]
                     tally_str = ", ".join(tally_parts) if tally_parts else "No votes"
-                    self.log("Night", "System", "VoteSummary", f"Votes: {tally_str}", is_secret=True)
+                    self.log("Night", "System", "VoteSummary", f"Votes: {tally_str}", is_secret=True, target_log="Mafia")
     
-                    # Wait for last mafia TTS to finish before summary
-                    self.tts.wait_for_speech()
+                    # Do NOT wait for last mafia TTS here. 
+                    # We proceed to Cop generation immediately primarily so Cop generates while Mafia talks.
+                    # self.tts.wait_for_speech()
     
                     if mafia_votes:
                         max_votes = max(mafia_votes.values())
@@ -722,24 +814,111 @@ class GameEngine:
                         if len(winners) > 1:
                             import random
                             kill_target = random.choice(winners)
-                            self.log("Night", "System", "TieBreak", f"Tie {winners}. Random: {kill_target}", is_secret=True)
+                            self.log("Night", "System", "TieBreak", f"Tie {winners}. Random: {kill_target}", is_secret=True, target_log="Mafia")
                         else:
                             kill_target = winners[0]
     
-                        # Execute Kill
-                        if kill_target in self.active_players and self.active_players[kill_target].state.is_alive:
+                        # Execute Kill (Secretly for now)
+                        if kill_target in self.active_players:
                             victim = self.active_players[kill_target]
-                            victim.state.is_alive = False
-                            self.log("Night", "System", "Kill", f"Mafia killed {kill_target}")
-                            self._print(f"\n🩸 TRAGEDY! {kill_target} was found DEAD in the morning.🩸")
-                            self._announce(f"{kill_target} was killed during the night")
+                            if victim.state.is_alive:
+                                victim.state.is_alive = False
+                                night_victim = kill_target
+                                self.log("Night", "System", "Kill", f"Mafia killed {kill_target}", is_secret=True, target_log="Mafia")
+                            else:
+                                self.log("Night", "System", "Fail", f"Target {kill_target} already dead", is_secret=True, target_log="Mafia")
                         else:
-                             self.log("Night", "System", "Fail", "Invalid target")
+                             self.log("Night", "System", "Fail", "Invalid target", is_secret=True, target_log="Mafia")
                     else:
-                         self.log("Night", "System", "Quiet", "No kill")
+                         self.log("Night", "System", "Quiet", "No kill", is_secret=True, target_log="Mafia")
+
+                    # --- COP TURN (After Mafia Kill) ---
+                    cop_alive = [p for p in self._get_living_players() if p.state.role == "Cop"]
+                    for cop in cop_alive:
+                        if not cop.state.is_alive: continue # Safeguard (if died tonight)
+                        
+                        try:
+                            # Cop Turn
+                            output = cop.take_turn(self.state, self.state.turn)
+
+                            target_name = output.vote
+                            # Normalize
+                            if target_name and target_name.lower().startswith("investigate "):
+                                target_name = target_name[12:].strip()
+
+                            # Prepare TTS
+                            speech = output.speech or ""
+                            spoken_action = f"{cop.state.name} investigating {target_name}." if target_name else ""
+                            tts_text = f"{speech} {spoken_action}".strip() if speech else spoken_action
+                            
+                            audio_path = None
+                            if tts_text:
+                                audio_path = self.tts.prepare_speech(tts_text, cop.state.name, announce_name=True)
+
+                            self._wait_for_speech_with_pause(listener)
+                            
+                            if output.strategy:
+                                self._print(f"\n💭 👮 {cop.state.name} Strategy: {output.strategy}")
+
+                            # Log action
+                            action_desc = f"[Investigates {target_name}]" if target_name else "[No investigation]"
+                            self.log("Night", cop.state.name, "investigate", f"{action_desc} {output.speech or ''}", is_secret=True, target_log="Cop")
+                            
+                            # Play Audio
+                            if audio_path:
+                                self.tts.play_file(audio_path, background=True)
+
+                            # Resolve Investigation
+                            if target_name:
+                                target = self.active_players.get(target_name)
+                                if target:
+                                    # Result: "Role: Mafia" or "Role: Villager" (or other)
+                                    # For game balance, Cop usually sees "Suspicious" (Mafia) or "Innocent" (Villager/Cop/Doctor)
+                                    # But let's give exact role for now as per user request to buff town.
+                                    result = "Mafia" if target.state.role == "Mafia" else "Innocent"
+                                    
+                                    investigation_msg = f"Investigation Result: {target_name} is {result}."
+                                    self._print(f"\n🔍 {cop.state.name} checks {target_name}... Result: {result}")
+                                    
+                                    # Log to Cop's secret log
+                                    self.state.cop_logs.append(LogEntry(
+                                        turn=self.state.turn,
+                                        phase=f"Night {self.state.turn}",
+                                        actor="System",
+                                        action="Info",
+                                        content=investigation_msg
+                                    ))
+                                else:
+                                     self.state.cop_logs.append(LogEntry(
+                                        turn=self.state.turn,
+                                        phase=f"Night {self.state.turn}",
+                                        actor="System",
+                                        action="Info",
+                                        content=f"Investigation failed: {target_name} not found."
+                                    ))
+
+                        except Exception as e:
+                            self._print(f"Cop Error: {e}")
+                        
+                        self._wait_for_next(listener)
     
-                self._wait_for_next(listener)
-                self.state.turn += 1
+                        self._wait_for_next(listener)
+    
+                    # --- DEATH REVEAL (Morning) ---
+                    if night_victim:
+                         self._print(f"\n🩸 TRAGEDY! {night_victim} was found DEAD in the morning.🩸")
+                         self._announce(f"{night_victim} was killed during the night")
+                         self.log("Night", "System", "Death", f"{night_victim} found dead")
+                         
+                         # Role Reveal - DISABLED INITIAL NIGHT REVEAL AS PER RULE
+                         # if self.state.reveal_role_on_death:
+                         #      victim = self.active_players[night_victim]
+                         #      role_emoji = "👺" if victim.state.role == "Mafia" else "👤"
+                         #      self._print(f"{role_emoji} {night_victim} was a {victim.state.role}!")
+                         #      self.log("Night", "System", "RoleReveal", f"{night_victim} was a {victim.state.role}")
+
+                    self._wait_for_next(listener)
+                    self.state.turn += 1
 
     def _run_reflection(self, winner: str):
         """Allow all players to reflect and update their memories"""
