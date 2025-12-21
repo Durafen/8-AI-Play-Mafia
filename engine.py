@@ -1,240 +1,21 @@
 import random
-import asyncio
 import json
-from typing import List, Dict
+import os
+import shutil
+import time
+import concurrent.futures
+from typing import List, Dict, Optional, Tuple
+from datetime import datetime
+
 from models import Player
 from api_clients import UnifiedLLMClient
 from schemas import GameState, LogEntry, TurnOutput
-
-# TTS Config
-TTS_ENABLED = True   # Set to False to disable text-to-speech
-TTS_RATE = "+30%"    # Speech speed: "+30%" = 30% faster, "-10%" = 10% slower
-AUTO_CONTINUE = True # Set to True to run without user intervention
-MEMORY_ENABLED = False # Set to True to enable distinct memories per player from previous games
-REVEAL_ROLE_ON_DEATH = True # Set to False to hide role when player dies
-
-# Config for Roster (with TTS voices)
-# active: True = participates in game, False = disabled
-# use_cli: True = CLI tool, False = API
-ROSTER_CONFIG = [
-    # OPENAI
-    {"active": False, "use_cli": True, "name": "Rick", "provider": "openai", "model": "gpt-5.2", "voice": "en-US-GuyNeural"},
-    {"active": False, "use_cli": True, "name": "Morty", "provider": "openai", "model": "gpt-5.1", "voice": "en-US-ChristopherNeural"},
-    {"active": True, "use_cli": True, "name": "Gpt", "provider": "openai", "model": "gpt-5.1-codex-mini", "voice": "en-US-EricNeural"},
-
-    # ANTHROPIC
-    {"active": True, "use_cli": True, "name": "Haiku", "provider": "anthropic", "model": "haiku", "voice": "en-GB-RyanNeural"},
-    {"active": True, "use_cli": True, "name": "Sonnet", "provider": "anthropic", "model": "sonnet", "voice": "en-GB-SoniaNeural"},
-    {"active": False, "use_cli": True, "name": "Opus", "provider": "anthropic", "model": "opus", "voice": "en-US-AndrewNeural"},
-
-    # OPENROUTER (API only)
-    {"active": False, "use_cli": False, "name": "Chimera", "provider": "openrouter", "model": "tngtech/deepseek-r1t2-chimera:free", "voice": "en-AU-NatashaNeural"},
-    {"active": False, "use_cli": False, "name": "Deepseek", "provider": "openrouter", "model": "nex-agi/deepseek-v3.1-nex-n1:free", "voice": "en-CA-LiamNeural"},
-    {"active": False, "use_cli": False, "name": "Devstral", "provider": "openrouter", "model": "mistralai/devstral-2512:free", "voice": "en-CA-ClaraNeural"},
-    {"active": False, "use_cli": False, "name": "Olmo", "provider": "openrouter", "model": "allenai/olmo-3.1-32b-think:free", "voice": "en-US-BrianNeural"},
-    {"active": False, "use_cli": False, "name": "Oss", "provider": "openrouter", "model": "openai/gpt-oss-120b:free", "voice": "en-PH-JamesNeural"},
-
-    # GOOGLE
-    {"active": True, "use_cli": True, "name": "Pro", "provider": "google", "model": "gemini-2.5-pro", "voice": "en-NZ-MitchellNeural"},
-    {"active": True, "use_cli": True, "name": "Flash", "provider": "google", "model": "gemini-2.5-flash", "voice": "en-IE-ConnorNeural"},
-    {"active": True, "use_cli": True, "name": "Preview", "provider": "google", "model": "gemini-3-flash-preview", "voice": "en-IE-EmilyNeural"},
-
-    # QWEN (via qwen CLI)
-    {"active": True, "use_cli": True, "name": "Qwen", "provider": "qwen", "model": "coder-model", "voice": "en-ZA-LukeNeural"},
-    {"active": True, "use_cli": True, "name": "Ling", "provider": "qwen", "model": "coder-model", "voice": "en-ZA-LeahNeural"},
-    {"active": False, "use_cli": True, "name": "Chang", "provider": "qwen", "model": "coder-model", "voice": "en-GB-ThomasNeural"},
-    {"active": False, "use_cli": True, "name": "Vision", "provider": "qwen", "model": "vision-model", "voice": "en-HK-SamNeural"},
-
-    # OLLAMA (local)
-    {"active": False, "use_cli": True, "name": "Nemotron", "provider": "ollama", "model": "nemotron-3-nano:30b-cloud", "voice": "en-IN-PrabhatNeural"},
-]
-
-NARRATOR_VOICE = "en-US-AriaNeural"
-
-import shutil
-import os
-import tempfile
-import subprocess
-import threading
-import time
-from datetime import datetime
-
-import sys
-import termios
-import tty
-import select
-
-try:
-    import edge_tts
-    EDGE_TTS_AVAILABLE = True
-except ImportError:
-    EDGE_TTS_AVAILABLE = False
-
-
-class InputListener:
-    """Handles non-blocking keyboard input"""
-    def __init__(self):
-        self.old_settings = None
-        
-    def __enter__(self):
-        self.old_settings = termios.tcgetattr(sys.stdin)
-        tty.setcbreak(sys.stdin.fileno())
-        return self
-        
-    def __exit__(self, type, value, traceback):
-        if self.old_settings:
-            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, self.old_settings)
-            
-    def is_data(self):
-        return select.select([sys.stdin], [], [], 0) == ([sys.stdin], [], [])
-        
-    def check_for_space(self):
-        if self.is_data():
-            c = sys.stdin.read(1)
-            if c == ' ':
-                return True
-        return False
-
-
-
-class TTSEngine:
-    """Edge TTS wrapper with background playback support"""
-
-    def __init__(self, enabled: bool = True, rate: str = TTS_RATE):
-        self.enabled = enabled and EDGE_TTS_AVAILABLE
-        self.rate = rate
-        self._voice_map = {}  # player_name -> voice_id
-        self._name_cache = {}  # player_name -> cached audio path
-        self._current_thread = None  # Track current TTS thread
-        if enabled and not EDGE_TTS_AVAILABLE:
-            print("[TTS] edge-tts not installed. Run: pip install edge-tts")
-
-    def register_player(self, name: str, voice: str):
-        self._voice_map[name] = voice
-
-    def wait_for_speech(self):
-        """Wait for current speech to finish"""
-        if self._current_thread and self._current_thread.is_alive():
-            self._current_thread.join()
-
-    def _get_cached_name(self, player_name: str) -> str:
-        """Get or create cached audio file for player name announcement."""
-        if player_name in self._name_cache:
-            path = self._name_cache[player_name]
-            if os.path.exists(path):
-                return path
-
-        # Generate and cache name audio in narrator voice
-        cache_dir = os.path.join(tempfile.gettempdir(), "mafia_tts_cache")
-        os.makedirs(cache_dir, exist_ok=True)
-        cache_path = os.path.join(cache_dir, f"name_{player_name}.mp3")
-
-        if not os.path.exists(cache_path):
-            try:
-                asyncio.run(self._generate_audio(f"{player_name}.", NARRATOR_VOICE, cache_path))
-            except Exception as e:
-                print(f"[TTS] Failed to cache name: {e}")
-                return None
-
-        self._name_cache[player_name] = cache_path
-        return cache_path
-
-    async def _generate_audio(self, text: str, voice: str, output_path: str):
-        """Generate audio file from text."""
-        communicate = edge_tts.Communicate(text, voice, rate=self.rate)
-        await asyncio.wait_for(communicate.save(output_path), timeout=30.0)
-
-    def speak(self, text: str, player_name: str = None, voice: str = None, background: bool = False, announce_name: bool = False):
-        """Speak text. If background=True, runs in background thread. If announce_name=True, plays cached name in narrator voice first."""
-        if not self.enabled or not text or not text.strip():
-            return
-        
-        path = self.prepare_speech(text, player_name, voice, announce_name)
-        if path:
-            self.play_file(path, background)
-
-    def prepare_speech(self, text: str, player_name: str = None, voice: str = None, announce_name: bool = False) -> str:
-        """Generate audio file and return path. Blocks until generation complete."""
-        if not self.enabled or not text or not text.strip():
-            return None
-            
-        use_voice = voice or self._voice_map.get(player_name, "en-US-AriaNeural")
-        try:
-             # Pre-generate main speech audio (strip markdown emphasis)
-            clean_text = text.replace("*", "")
-            with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
-                speech_path = f.name
-            asyncio.run(self._generate_audio(clean_text, use_voice, speech_path))
-
-            # Get name audio and concatenate if needed
-            if announce_name and player_name:
-                name_audio = self._get_cached_name(player_name)
-                if name_audio:
-                     # Concatenate name + speech
-                    with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
-                        combined_path = f.name
-                    
-                    list_path = speech_path + ".list"
-                    with open(list_path, "w") as f:
-                         f.write(f"file '{name_audio}'\nfile '{speech_path}'")
-                    
-                    subprocess.run(
-                        ["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", list_path, "-c", "copy", combined_path],
-                        check=True, capture_output=True, timeout=30
-                    )
-                    os.unlink(list_path)
-                    os.unlink(speech_path) # Delete original speech part
-                    return combined_path
-
-            return speech_path
-
-        except Exception as e:
-            print(f"[TTS Error in prepare] {e}")
-            return None
-
-    def play_file(self, path: str, background: bool = False):
-        """Play an existing audio file"""
-        if background:
-            self.wait_for_speech()
-            self._current_thread = threading.Thread(
-                target=self._play_file_sync, args=(path,), daemon=True
-            )
-            self._current_thread.start()
-        else:
-            self.wait_for_speech()
-            self._play_file_sync(path)
-
-    def _play_file_sync(self, path: str):
-        try:
-            subprocess.run(["afplay", path], check=True)
-        except Exception as e:
-            print(f"[TTS Play Error] {e}")
-        finally:
-            if os.path.exists(path):
-                os.unlink(path)
-
-    def _speak_with_name(self, text: str, voice: str, announce_player: str = None):
-         # Deprecated
-         pass
-
-
-    def _speak_sync(self, text: str, voice: str):
-        """Synchronous speech (runs TTS and plays audio)"""
-        try:
-            asyncio.run(self._speak_async(text, voice))
-        except Exception as e:
-            print(f"[TTS Error] {e}")
-
-    async def _speak_async(self, text: str, voice: str):
-        with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
-            temp_path = f.name
-        try:
-            communicate = edge_tts.Communicate(text, voice, rate=self.rate)
-            await communicate.save(temp_path)
-            subprocess.run(["afplay", temp_path], check=True)  # macOS
-        finally:
-            if os.path.exists(temp_path):
-                os.remove(temp_path)
+from config import (
+    TTS_ENABLED, AUTO_CONTINUE, MEMORY_ENABLED, REVEAL_ROLE_ON_DEATH,
+    NARRATOR_VOICE, ROLE_EMOJIS, PHASE_EMOJIS, ROSTER_CONFIG
+)
+from tts_engine import TTSEngine
+from input_listener import InputListener
 
 
 class GameEngine:
@@ -287,11 +68,9 @@ class GameEngine:
             idx = self.players.index(player) + 1
             actor_display = f"{idx}. {actor}:"
 
-            # Add Mafia/Cop Icon for terminal display only
-            if player.state.role == "Mafia":
-                actor_display = f"👺 {actor_display}"
-            elif player.state.role == "Cop":
-                actor_display = f"👮 {actor_display}"
+            # Add role icon for terminal display only
+            if player.state.role in ("Mafia", "Cop"):
+                actor_display = f"{self._get_role_emoji(player.state.role)} {actor_display}"
 
         # Append vote text to content for persistent history
         if vote_target:
@@ -308,12 +87,7 @@ class GameEngine:
         )
         
         # Add Phase Icon
-        phase_icon = ""
-        if phase == "Day": phase_icon = "☀️ "
-        elif phase == "Night": phase_icon = "🌙 "
-        elif phase == "Trial": phase_icon = "⚖️ "
-        elif phase == "Setup": phase_icon = "⚙️ "
-        elif phase == "Reflection": phase_icon = ""
+        phase_icon = PHASE_EMOJIS.get(phase, "")
 
         # Append vote visual
         vote_str = ""
@@ -466,36 +240,79 @@ class GameEngine:
             return
         input("\n[PRESS ENTER TO CONTINUE NEXT ACTION] >> ")
 
-    def _collect_votes_concurrently(self, voters: List[Player], all_votes: dict, listener):
+    # --- HELPER METHODS ---
+
+    def _get_role_emoji(self, role: str) -> str:
+        """Get emoji for role. Single source of truth."""
+        return ROLE_EMOJIS.get(role, "👤")
+
+    def _get_strategy_prefix(self, player: Player) -> str:
+        """Get prefix for strategy display (includes role emoji for Mafia/Cop)."""
+        if player.state.role == "Mafia":
+            return "👺 "
+        elif player.state.role == "Cop":
+            return "👮 "
+        return ""
+
+    def _print_strategy(self, player: Player, output: TurnOutput) -> None:
+        """Print strategy with role-appropriate prefix."""
+        if output.strategy:
+            prefix = self._get_strategy_prefix(player)
+            self._print(f"\n💭 {prefix}{player.state.name} Strategy: {output.strategy}")
+
+    def _start_background_turn(self, player: Player) -> Tuple[Optional[concurrent.futures.Future], Optional[concurrent.futures.ThreadPoolExecutor]]:
+        """Start a player's turn in background thread. Returns (future, executor)."""
+        if not player:
+            return None, None
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+        future = executor.submit(player.take_turn, self.state, self.state.turn)
+        return future, executor
+
+    def _get_background_result(self, future: Optional[concurrent.futures.Future], executor: Optional[concurrent.futures.ThreadPoolExecutor]) -> Optional[TurnOutput]:
+        """Get result from background turn and cleanup executor."""
+        if not future:
+            return None
+        result = future.result()
+        if executor:
+            executor.shutdown()
+        return result
+
+    def _check_game_ends_after_death(self, victim_name: str) -> bool:
+        """Check if game would end after this player's death."""
+        future_living = [p for p in self._get_living_players() if p.state.name != victim_name]
+        future_mafia = sum(1 for p in future_living if p.state.role == "Mafia")
+        future_town = sum(1 for p in future_living if p.state.role != "Mafia")
+        return (future_mafia == 0) or (future_mafia >= future_town)
+
+    def _collect_votes_concurrently(self, voters: List[Player], all_votes: dict, listener, nominees: List[str]):
         """Collect votes from all voters in up to 4 concurrent processes"""
-        import concurrent.futures
 
         def collect_voter_vote(voter: Player):
-            """Collect one voter's single vote for who to kill (MANDATORY)"""
+            """Collect one voter's single vote for a nominee (MANDATORY)"""
             try:
                 # Set phase to Trial for voting context (they're voting on nominees)
                 output = voter.take_turn(self.state, self.state.turn)
 
-                prefix = "👺 " if voter.state.role == "Mafia" else ""
                 if output.strategy:
+                    prefix = self._get_strategy_prefix(voter)
                     self._print(f"\n💭 {prefix}{voter.state.name} Strategy: {output.strategy}")
 
                 # Get the player name they vote for - MANDATORY, no abstain
                 vote = (output.vote or "").lower().strip()
-                # Validate: must be a valid player name, not null/abstain
-                valid_targets = [p.state.name.lower() for p in self._get_living_players()]
+                # Validate: must be a nominee, not just any living player
+                valid_targets = [n.lower() for n in nominees]
                 if vote and vote in valid_targets:
                     # Return with proper capitalization
-                    target = next(p.state.name for p in self._get_living_players() if p.state.name.lower() == vote)
+                    target = next(n for n in nominees if n.lower() == vote)
                     return voter.state.name, target
                 else:
-                    # Invalid vote - default to random player or first alive player
-                    default_target = self._get_living_players()[0].state.name
+                    # Invalid vote - default to first nominee
+                    default_target = nominees[0]
                     self._print(f"[WARN] {voter.state.name} invalid vote '{vote}'. Defaulting to {default_target}")
                     return voter.state.name, default_target
             except Exception as e:
                 self._print(f"Error voting for {voter.state.name}: {e}")
-                default_target = self._get_living_players()[0].state.name
+                default_target = nominees[0]
                 return voter.state.name, default_target
 
         # Use ThreadPoolExecutor with max 4 workers for concurrent voting
@@ -598,12 +415,9 @@ class GameEngine:
                 self.log("Day", "System", "Info", f"Speaking order: {', '.join(p.state.name for p in ordered_living)}{phase_flow}")
 
                 # Start first speaker's turn in background while announcement plays
-                import concurrent.futures
-                first_speaker_future = None
-                executor = None
-                if ordered_living and ordered_living[0].state.is_alive:
-                    executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
-                    first_speaker_future = executor.submit(ordered_living[0].take_turn, self.state, self.state.turn)
+                first_speaker_future, executor = self._start_background_turn(
+                    ordered_living[0] if ordered_living else None
+                )
 
                 for i, player in enumerate(ordered_living):
                     # Double-check aliveness just in case state drifted
@@ -614,8 +428,7 @@ class GameEngine:
                     try:
                         # Use pre-generated output for first speaker if available
                         if i == 0 and first_speaker_future:
-                            output = first_speaker_future.result()
-                            executor.shutdown()
+                            output = self._get_background_result(first_speaker_future, executor)
                         else:
                             # Generate while previous TTS might still be playing
                             output = player.take_turn(self.state, self.state.turn)
@@ -637,9 +450,7 @@ class GameEngine:
                         # Wait for previous TTS before displaying new output
                         self._wait_for_speech_with_pause(listener)
 
-                        prefix = "👺 " if player.state.role == "Mafia" else ("👮 " if player.state.role == "Cop" else "")
-                        if output.strategy:
-                            self._print(f"\n💭 {prefix}{player.state.name} Strategy: {output.strategy}")
+                        self._print_strategy(player, output)
 
                         # Construct content with bracketed action if present
                         action_part = f"[Nominated {output.vote}] " if spoken_action else ""
@@ -683,7 +494,6 @@ class GameEngine:
                     accused_players = []
 
                     # Start first defendant's turn in background while announcements happen
-                    import concurrent.futures
                     first_future = None
                     executor = None
                     if sorted_nominees:
@@ -694,8 +504,7 @@ class GameEngine:
                             # Announce first defendant BEFORE starting their turn
                             self._print(f"\n⚖️  {first_name} speaks for defense ⚖️")
                             # NOW start their turn in background while announcements play
-                            executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
-                            first_future = executor.submit(first_accused.take_turn, self.state, self.state.turn)
+                            first_future, executor = self._start_background_turn(first_accused)
 
                     for i, (accused_name, nom_count) in enumerate(sorted_nominees):
                         accused = self.active_players.get(accused_name)
@@ -714,8 +523,7 @@ class GameEngine:
                         try:
                             # Use pre-generated output for first defendant if available
                             if i == 0 and first_future:
-                                output = first_future.result()
-                                executor.shutdown()
+                                output = self._get_background_result(first_future, executor)
                             else:
                                 output = accused.take_turn(self.state, self.state.turn)
 
@@ -728,9 +536,7 @@ class GameEngine:
                             # Wait for previous TTS while current is being prepared
                             self._wait_for_speech_with_pause(listener)
 
-                            prefix = "👺 " if accused.state.role == "Mafia" else ""
-                            if output.strategy:
-                                self._print(f"\n💭 {prefix}{accused_name} Strategy: {output.strategy}")
+                            self._print_strategy(accused, output)
                             self.log("Trial", accused_name, "speak", f"[Defense] {speech}")
 
                             # Play current TTS in background (next defendant can prepare while this plays)
@@ -753,8 +559,11 @@ class GameEngine:
                     # Dictionary to store votes: {voter_name: target_player_name}
                     all_votes = {}
 
+                    # Extract nominee names from sorted_nominees (list of (name, count) tuples)
+                    nominee_names = [name for name, count in sorted_nominees]
+
                     # Use concurrent voting with up to 4 processes
-                    self._collect_votes_concurrently(voters, all_votes, listener)
+                    self._collect_votes_concurrently(voters, all_votes, listener, nominee_names)
 
                     self._wait_for_next(listener)
 
@@ -798,12 +607,7 @@ class GameEngine:
                                     self.state.phase = "LastWords"
 
                                     # Determine role emoji
-                                    if trial_victim.state.role == "Mafia":
-                                        trial_role_emoji = "👺"
-                                    elif trial_victim.state.role == "Cop":
-                                        trial_role_emoji = "👮"
-                                    else:
-                                        trial_role_emoji = "👤"
+                                    trial_role_emoji = self._get_role_emoji(trial_victim.state.role)
 
                                     # Add death to public logs so victim sees it (role reveal logged later)
                                     self.state.public_logs.append(LogEntry(
@@ -812,8 +616,7 @@ class GameEngine:
                                     ))
 
                                     # Start last words in background
-                                    trial_lw_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
-                                    trial_last_words_future = trial_lw_executor.submit(trial_victim.take_turn, self.state, self.state.turn)
+                                    trial_last_words_future, trial_lw_executor = self._start_background_turn(trial_victim)
 
                     # NOW announce results (TTS plays while last words generates)
                     self._print(f"\n📊 VOTING RESULTS 📊")
@@ -843,8 +646,7 @@ class GameEngine:
                         # First victim uses pre-generated last words
                         if i == 0 and trial_last_words_future and not trial_game_ends:
                             try:
-                                output = trial_last_words_future.result()
-                                trial_lw_executor.shutdown()
+                                output = self._get_background_result(trial_last_words_future, trial_lw_executor)
 
                                 speech = output.speech or ""
                                 audio_path = None
@@ -853,9 +655,7 @@ class GameEngine:
 
                                 self._announce(f"{kill_target}, last words.")
 
-                                prefix = "👺 " if victim.state.role == "Mafia" else ("👮 " if victim.state.role == "Cop" else "")
-                                if output.strategy:
-                                    self._print(f"\n💭 {prefix}{kill_target} Strategy: {output.strategy}")
+                                self._print_strategy(victim, output)
 
                                 self.log("LastWords", kill_target, "speak", f"[Last Words] {speech}")
 
@@ -890,9 +690,7 @@ class GameEngine:
 
                                     self._wait_for_speech_with_pause(listener)
 
-                                    prefix = "👺 " if victim.state.role == "Mafia" else ("👮 " if victim.state.role == "Cop" else "")
-                                    if output.strategy:
-                                        self._print(f"\n💭 {prefix}{kill_target} Strategy: {output.strategy}")
+                                    self._print_strategy(victim, output)
 
                                     self.log("LastWords", kill_target, "speak", f"[Last Words] {speech}")
 
@@ -905,22 +703,13 @@ class GameEngine:
                                 self._wait_for_next(listener)
                                 self.state.phase = "Trial"
 
-                        # Log death and role reveal
-                        if i == 0:
-                            # First victim already marked dead above
-                            pass
-                        else:
-                            victim.state.is_alive = False
+                        # Mark victim as dead (always, even if game ends)
+                        victim.state.is_alive = False
 
                         self.log("Result", "System", "Death", f"{kill_target} eliminated.")
                         self._announce(f"{kill_target} eliminated.")
                         if self.state.reveal_role_on_death:
-                            if victim.state.role == "Mafia":
-                                role_emoji = "👺"
-                            elif victim.state.role == "Cop":
-                                role_emoji = "👮"
-                            else:
-                                role_emoji = "👤"
+                            role_emoji = self._get_role_emoji(victim.state.role)
                             # Role already in public_logs from earlier - just log for display
                             self.log("Result", "System", "RoleReveal", f"{role_emoji} {kill_target} was a {victim.state.role}!")
                         someone_died = True
@@ -953,12 +742,9 @@ class GameEngine:
                     self.log("Night", "System", "MafiaWake", "Mafia awake", is_secret=True, target_log="Mafia")
 
                     # Start first Mafia's turn in background while announcement plays
-                    import concurrent.futures
-                    first_mafia_future = None
-                    executor = None
-                    if mafia_alive and mafia_alive[0].state.is_alive:
-                        executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
-                        first_mafia_future = executor.submit(mafia_alive[0].take_turn, self.state, self.state.turn)
+                    first_mafia_future, executor = self._start_background_turn(
+                        mafia_alive[0] if mafia_alive else None
+                    )
 
                     night_victim = None
                     mafia_votes = {}
@@ -968,8 +754,7 @@ class GameEngine:
                         try:
                             # Use pre-generated output for first Mafia if available
                             if i == 0 and first_mafia_future:
-                                output = first_mafia_future.result()
-                                executor.shutdown()
+                                output = self._get_background_result(first_mafia_future, executor)
                             else:
                                 # Generate while previous TTS might still be playing
                                 output = m_player.take_turn(self.state, self.state.turn)
@@ -991,8 +776,7 @@ class GameEngine:
                             # Wait for previous TTS before displaying
                             self._wait_for_speech_with_pause(listener)
 
-                            if output.strategy:
-                                self._print(f"\n💭 👺 {m_player.state.name} Strategy: {output.strategy}")
+                            self._print_strategy(m_player, output)
                             
                             content = f"{action_tag}{output.speech or ''}"
                             self.log("Night", m_player.state.name, "whisper", content, is_secret=True, target_log="Mafia")
@@ -1024,7 +808,6 @@ class GameEngine:
                         winners = [k for k, v in mafia_votes.items() if v == max_votes]
     
                         if len(winners) > 1:
-                            import random
                             kill_target = random.choice(winners)
                             self.log("Night", "System", "TieBreak", f"Tie {winners}. Random: {kill_target}", is_secret=True, target_log="Mafia")
                         else:
@@ -1069,9 +852,8 @@ class GameEngine:
                                 audio_path = self.tts.prepare_speech(tts_text, cop.state.name, announce_name=True)
 
                             self._wait_for_speech_with_pause(listener)
-                            
-                            if output.strategy:
-                                self._print(f"\n💭 👮 {cop.state.name} Strategy: {output.strategy}")
+
+                            self._print_strategy(cop, output)
 
                             # Log action
                             action_desc = f"[Investigates {target_name}]" if target_name else "[No investigation]"
@@ -1131,12 +913,7 @@ class GameEngine:
                             self.state.phase = "LastWords"
 
                             # Determine role emoji
-                            if victim.state.role == "Mafia":
-                                death_role_emoji = "👺"
-                            elif victim.state.role == "Cop":
-                                death_role_emoji = "👮"
-                            else:
-                                death_role_emoji = "👤"
+                            death_role_emoji = self._get_role_emoji(victim.state.role)
 
                             # Add death to public log BEFORE prompt (so victim sees it) - no print yet
                             self.state.public_logs.append(LogEntry(
@@ -1150,8 +927,7 @@ class GameEngine:
                                 ))
 
                             # Start last words prompt in background (while Cop TTS still playing)
-                            lw_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
-                            last_words_future = lw_executor.submit(victim.take_turn, self.state, self.state.turn)
+                            last_words_future, lw_executor = self._start_background_turn(victim)
 
                     # NOW wait for Cop's TTS to finish before revealing death
                     self.tts.wait_for_speech()
@@ -1164,8 +940,7 @@ class GameEngine:
                         # Get last words result (should be ready or almost ready)
                         if last_words_future:
                             try:
-                                output = last_words_future.result()
-                                lw_executor.shutdown()
+                                output = self._get_background_result(last_words_future, lw_executor)
                                 night_victim_speech = output.speech or ""
                                 night_victim_strategy = output.strategy
                                 if night_victim_speech:
@@ -1184,8 +959,8 @@ class GameEngine:
                          # --- LAST WORDS FOR NIGHT VICTIM (Already prepared) ---
                          self._announce(f"{night_victim}, last words.")
 
-                         prefix = "👺 " if victim.state.role == "Mafia" else ("👮 " if victim.state.role == "Cop" else "")
                          if night_victim_strategy:
+                             prefix = self._get_strategy_prefix(victim)
                              self._print(f"\n💭 {prefix}{night_victim} Strategy: {night_victim_strategy}")
 
                          self.log("LastWords", night_victim, "speak", f"[Last Words] {night_victim_speech}")

@@ -31,7 +31,8 @@ class Player:
     def _build_system_prompt(self, game_state: GameState) -> str:
         player_count = len(game_state.players)
         villager_count = player_count - 2 # 2 Mafia
-        prompt = f"""MAFIA GAME. You: {self.state.name} ({self.state.role}).
+        prompt = f"""MAFIA GAME.
+>>> YOU: {self.state.name} ({self.state.role}) <<<
 {player_count} players: 2 Mafia, {villager_count} Villagers (1 Cop).
 {'Role revealed on death. ' if game_state.reveal_role_on_death else ''}Last words before death.
 """
@@ -151,7 +152,7 @@ OUTPUT: JSON only, no backticks.
              if game_state.on_trial == self.state.name:
                  prompt += "TRIAL: You're on trial. Defend yourself. vote=null.\n"
              else:
-                 prompt += f"TRIAL: Vote for who to eliminate (player name). TIE = all tied die.\n"
+                 prompt += f"TRIAL: Vote for a nominee to eliminate (player name). TIE = all tied die.\n"
                  prompt += "Consider the implications of your vote. Results are public.\n"
         elif game_state.phase == "LastWords":
              prompt += "SENTENCE: DEATH. This is your final chance to speak (max 100w). vote=null.\n"
@@ -174,7 +175,7 @@ OUTPUT: JSON only, no backticks.
              if game_state.turn == 1:
                  prompt += "\nNo voting on Day 1 (vote=null)."
              else:
-                 prompt += "\nNominees go to trial. One will be eliminated."
+                 prompt += "\nNominees go to trial. One of the nominees will be eliminated."
                  prompt += "\nUse 'vote' to nominate a suspect for trial (PlayerName ONLY or null)."
              prompt += "\n"
 
