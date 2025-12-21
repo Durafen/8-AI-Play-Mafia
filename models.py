@@ -69,8 +69,11 @@ OUTPUT: JSON only, no backticks.
 """
         # Dynamic Speech Description
         speech_desc = "<75w public statement>"
-        if game_state.phase == "Trial" and game_state.on_trial != self.state.name:
-            speech_desc = "null"
+        if game_state.phase == "Trial":
+            if game_state.on_trial == self.state.name:
+                speech_desc = "<100w defense speech>"
+            else:
+                speech_desc = "null"
         elif game_state.phase == "Night" and self.state.role == "Mafia":
             if partner_alive:
                 speech_desc = "<75w whisper to partner>"
@@ -78,6 +81,8 @@ OUTPUT: JSON only, no backticks.
                 speech_desc = "<75w internal monologue>"
         elif game_state.phase == "Night" and self.state.role == "Cop":
             speech_desc = "<75w internal monologue>"
+        elif game_state.phase == "LastWords":
+            speech_desc = "<100w final words>"
 
         prompt += f'"speech": "{speech_desc}",\n'
 
@@ -150,6 +155,12 @@ OUTPUT: JSON only, no backticks.
                  prompt += "vote=guilty (kill) / innocent (save) / abstain. Guilty > Innocent = hanged.\n"
 
                  prompt += "Consider the implications of your vote.\n"
+        elif game_state.phase == "LastWords":
+             prompt += "SENTENCE: DEATH. This is your final chance to speak (max 100w). vote=null.\n"
+             if self.state.role == "Mafia":
+                 prompt += "MAFIA ADVICE: Sow chaos, confuse the town, Go out fighting!\n"
+             else:
+                 prompt += "VILLAGER ADVICE: Give your final reads. Who is suspicious? Who do you trust? Help the Town solve this after you're gone.\n"
         elif game_state.phase == "Night":
              if self.state.role == "Mafia":
                  prompt += "NIGHT: Whisper to partner. vote=PlayerName (ONLY the name).\n"
@@ -161,7 +172,7 @@ OUTPUT: JSON only, no backticks.
              # Day Phase
              prompt += f"DAY {game_state.turn}. {self.state.name}, analyze the situation, bring something new to the table, speak out, make it count."
              if self.state.role == "Cop":
-                 prompt += "\nWARNING: Hide role. Do NOT say 'investigate' or reveal yourself. Blend in smartly."
+                 prompt += "\nSTRATEGY: Hide role to survive. Reveal if necessary."
              if game_state.turn == 1:
                  prompt += "\nNo voting on Day 1 (vote=null)."
              else:

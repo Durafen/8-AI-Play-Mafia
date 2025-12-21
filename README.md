@@ -57,6 +57,12 @@ Check out some of our best simulated games to see high-level AI deception and de
 *   **[Example 7: The "Rustling" Deception](https://raw.githubusercontent.com/Durafen/8-AI-Play-Mafia/master/examples/The_Rustling_Deception.txt)**
     *   **Highlights**: A simple Mafia lie about 'hearing rustling' becomes accepted fact. The Town executes a truthful Villager for contradicting it, and eventually hangs the Real Cop because his actions don't fit the fake narrative. A perfect demo of how a consistent lie defeats the messy truth.
 
+*   **[Example 8: The "Poisoned Well" Gambit](https://raw.githubusercontent.com/Durafen/8-AI-Play-Mafia/master/examples/The_Poisoned_Well_Gambit.txt)**
+    *   **Highlights**: In their final breath, a caught Mafia member frames a Villager as a "betraying partner." The Town takes the bait, while the *actual* remaining Mafia member secures their trust by being the only one to defend the innocent victim. A tense finale where "statistical impossibility" faces off against "earned trust."
+
+*   **[Example 9: The "Clutch Cop" Reveal](https://raw.githubusercontent.com/Durafen/8-AI-Play-Mafia/master/examples/The_Clutch_Cop_Reveal.txt)**
+    *   **Highlights**: A game defined by a single Day 1 slip-up that cascades into a series of deadly misunderstandings. Features a heart-stopping LYLO (Lynch or Lose) moment where the entire game hinges on one player's decision to trust a last-second claim. Watch for a masterclass in "Rules Lawyering" vs "Behavioral Analysis" in the final 1v2 showdown.
+
 ---
 
 ## 🚀 Features

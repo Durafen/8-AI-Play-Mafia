@@ -711,11 +711,54 @@ class GameEngine:
                         if votes["guilty"] > votes["innocent"]:
                             # GUILTY - death
                             self._print(f"\n💀💀💀 {accused_name} IS GUILTY 💀💀💀")
+
+                            # Check if game ends immediately after this death
+                            future_living = [p for p in self._get_living_players() if p.state.name != accused_name]
+                            future_mafia = sum(1 for p in future_living if p.state.role == "Mafia")
+                            future_town = sum(1 for p in future_living if p.state.role != "Mafia")
+                            
+                            game_ends = (future_mafia == 0) or (future_mafia >= future_town)
+
+                            # --- LAST WORDS ---
+                            if not game_ends:
+                                self.state.phase = "LastWords"
+                                self._announce(f"{accused_name}, any last words?")
+                                try:
+                                    output = accused.take_turn(self.state, self.state.turn)
+                                    
+                                    # TTS
+                                    speech = output.speech or ""
+                                    audio_path = None
+                                    if speech:
+                                        audio_path = self.tts.prepare_speech(speech, accused_name, announce_name=True)
+                                    
+                                    self._wait_for_speech_with_pause(listener)
+                                    
+                                    prefix = "👺 " if accused.state.role == "Mafia" else ("👮 " if accused.state.role == "Cop" else "")
+                                    if output.strategy:
+                                        self._print(f"\n💭 {prefix}{accused_name} Strategy: {output.strategy}")
+                                    
+                                    self.log("LastWords", accused_name, "speak", output.speech)
+                                    
+                                    if audio_path:
+                                        self.tts.play_file(audio_path, background=True)
+                                        
+                                except Exception as e:
+                                    self._print(f"Error in last words: {e}")
+                                    
+                                self._wait_for_next(listener)
+                                self.state.phase = "Trial"
+
                             self.log("Result", "System", "Death", f"{accused_name} HANGED")
                             self._announce(f"{accused_name} has been found guilty and hanged")
                             accused.state.is_alive = False
                             if self.state.reveal_role_on_death:
-                                role_emoji = "👺" if accused.state.role == "Mafia" else "👤"
+                                if accused.state.role == "Mafia":
+                                    role_emoji = "👺"
+                                elif accused.state.role == "Cop":
+                                    role_emoji = "👮"
+                                else:
+                                    role_emoji = "👤"
                                 self.log("Result", "System", "RoleReveal", f"{role_emoji} {accused_name} was a {accused.state.role}!")
                                 self._announce(f"{accused_name} was a {accused.state.role}")
                             someone_died = True
@@ -870,7 +913,7 @@ class GameEngine:
                             if audio_path:
                                 self.tts.play_file(audio_path, background=True)
 
-                            # Resolve Investigation
+                            # Resolve Investigation (even if cop is killed tonight)
                             if target_name:
                                 target = self.active_players.get(target_name)
                                 if target:
@@ -878,10 +921,10 @@ class GameEngine:
                                     # For game balance, Cop usually sees "Suspicious" (Mafia) or "Innocent" (Villager/Cop/Doctor)
                                     # But let's give exact role for now as per user request to buff town.
                                     result = "Mafia" if target.state.role == "Mafia" else "Innocent"
-                                    
+
                                     investigation_msg = f"Investigation Result: {target_name} is {result}."
                                     self._print(f"\n🔍 {cop.state.name} checks {target_name}... Result: {result}")
-                                    
+
                                     # Log to Cop's secret log
                                     self.state.cop_logs.append(LogEntry(
                                         turn=self.state.turn,
@@ -891,7 +934,7 @@ class GameEngine:
                                         content=investigation_msg
                                     ))
                                 else:
-                                     self.state.cop_logs.append(LogEntry(
+                                        self.state.cop_logs.append(LogEntry(
                                         turn=self.state.turn,
                                         phase=f"Night {self.state.turn}",
                                         actor="System",
@@ -918,15 +961,48 @@ class GameEngine:
                          self._print(f"\n🩸 TRAGEDY! {night_victim} was found DEAD in the morning.🩸")
                          self._announce(f"{night_victim} was killed during the night")
                          self.log("Night", "System", "Death", f"{night_victim} found dead")
-                         
-                         # Role Reveal - DISABLED INITIAL NIGHT REVEAL AS PER RULE
-                         # if self.state.reveal_role_on_death:
-                         #      victim = self.active_players[night_victim]
-                         #      role_emoji = "👺" if victim.state.role == "Mafia" else "👤"
-                         #      self._print(f"{role_emoji} {night_victim} was a {victim.state.role}!")
-                         #      self.log("Night", "System", "RoleReveal", f"{night_victim} was a {victim.state.role}")
 
-                    self._wait_for_next(listener)
+                         # Role Reveal
+                         if self.state.reveal_role_on_death:
+                              victim = self.active_players[night_victim]
+                              if victim.state.role == "Mafia":
+                                  role_emoji = "👺"
+                              elif victim.state.role == "Cop":
+                                  role_emoji = "👮"
+                              else:
+                                  role_emoji = "👤"
+                              self.log("Night", "System", "RoleReveal", f"{role_emoji} {night_victim} was a {victim.state.role}!")
+                              self._announce(f"{night_victim} was a {victim.state.role}")
+
+                         # --- LAST WORDS FOR NIGHT VICTIM ---
+                         victim = self.active_players[night_victim]
+                         self.state.phase = "LastWords"
+                         self._announce(f"{night_victim}, any last words?")
+                         try:
+                             output = victim.take_turn(self.state, self.state.turn)
+
+                             # TTS
+                             speech = output.speech or ""
+                             audio_path = None
+                             if speech:
+                                 audio_path = self.tts.prepare_speech(speech, night_victim, announce_name=True)
+
+                             self._wait_for_speech_with_pause(listener)
+
+                             prefix = "👺 " if victim.state.role == "Mafia" else ("👮 " if victim.state.role == "Cop" else "")
+                             if output.strategy:
+                                 self._print(f"\n💭 {prefix}{night_victim} Strategy: {output.strategy}")
+
+                             self.log("LastWords", night_victim, "speak", output.speech)
+
+                             if audio_path:
+                                 self.tts.play_file(audio_path, background=True)
+
+                         except Exception as e:
+                             self._print(f"Error in night last words: {e}")
+
+                         self._wait_for_next(listener)
+
                     self.state.turn += 1
 
     def _run_reflection(self, winner: str):

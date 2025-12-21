@@ -1,0 +1,354 @@
+=== MAFIA GAME LOG (2025-12-21_01-57-17) ===
+Initializing Game...
+[System] Game Initialized. Mafia are: Haiku, Preview
+
+⚙️ System  Mafia: Haiku, Preview
+
+⚙️ System  Cop: Pro
+
+☀️ System Day 1
+
+System Speaking order: Haiku, Pro, Ling, Gpt, Flash, Preview, Sonnet, Qwen -> Night
+
+💭 👺 Haiku Strategy: Day 1 opener. No info yet—establish credibility and control narrative. Pro speaks second, so I'll force discussion toward analyzing voting patterns later. Preview is my partner; I'll avoid defending them early (suspicious). Plant seeds: push for activity from quieter players (Qwen, Flash). Position myself as logical analyst, not aggressive. Tonight we eliminate a Village strong-read. Build townies' false confidence in me.
+
+🗣️ 👺 1. Haiku: Hey everyone, Day 1. No deaths yet means we're evaluating pure behavior. I'm watching who participates versus lurks—that's gold here. Let's focus on getting everyone talking naturally. I'll be reading patterns: who asks clarifying questions, who deflects, who's genuine. I'm committing to activity and transparency. Who's got strong reads already?
+
+💭 👮 Pro Strategy: Haiku's opening is classic town. I'll align with it to build credibility. My goal is to appear as a proactive villager, encouraging discussion to gather as much data as possible before my first night's investigation. I will analyze the quality of each person's contribution, not just their activity level. Someone who just parrots others without adding substance is suspicious. My Cop role is my secret weapon; I must not even hint at it. I will use tonight's chatter to select my first target.
+
+🗣️ 👮 2. Pro: Haiku's right, we need to get everyone talking. I'd add to that: let's listen for *how* people talk. Is someone just agreeing with the group to seem helpful, or are they bringing their own ideas to the table? A hollow echo is more suspicious than silence to me. Let's see some original thoughts today. What's a theory someone has that isn't just 'let's talk'?
+
+💭 Ling Strategy: Establish myself as analytical observer. Focus on behavioral patterns Pro mentioned - genuine vs echoing. Watch for deflection tactics Haiku noted. Look for inconsistencies between words and engagement level. Position as collaborative investigator.
+
+🗣️ 3. Ling: Pro's right about original thoughts. I'm analyzing speech patterns and engagement levels. Notice how some deflect with questions while others make direct statements? Also tracking who responds to whom and how. Genuine collaboration creates consistent narratives, while defensive players often contradict themselves or avoid direct answers.
+
+💭 Gpt Strategy: I’ll keep tracking who leans on echoing others versus who brings specifics, note any odd pauses or phrasing, and try to tie their behavior to what we learn in later posts so we can start pairing up conflicting narratives quickly.
+
+🗣️ 4. Gpt: I agree tone-setting is helpful, but let’s push toward substance: if anyone sensed a mismatch between a statement and the body language of their response, share it. Even small inconsistencies help narrow the search, and I’ll be pairing them off with who’s asking instead of answering.
+
+💭 Flash Strategy: The current focus is on speech patterns and engagement, which is good. As a Villager, I'll leverage this by looking for extremes: those who *over-explain* to appear innocent, or *under-explain* to avoid scrutiny. I'll also encourage sharing of initial 'gut feelings' or subtle 'tells' not covered by direct speech analysis. My aim is to identify any deviations from genuine, concise communication, which could hint at Mafia deception.
+
+🗣️ 5. Flash: Great points on analyzing engagement and consistency, everyone. I'd add: let's also watch for extremes in explanations – who's over-explaining versus who's being suspiciously brief? Sometimes, our gut instincts pick up on subtle 'tells' beyond just words. Does anyone have an early gut feeling or a 'vibe' about anyone, however slight? Share it, it could be valuable.
+
+💭 👺 Preview Strategy: Haiku established an active persona, which I'll support by staying engaged. The table is currently heavy on meta-analysis. To avoid being a 'hollow echo' as Pro warned, I'll pivot the conversation toward the risks of over-intellectualizing. By questioning Ling's 'too prepared' tone, I create non-partner friction and project a 'gut-instinct' villager vibe. This distances me from the clinical group while following Flash’s lead on vibes, ensuring I don't look like I'm just following the herd.
+
+🗣️ 👺 6. Preview: Everyone’s getting very technical about 'speech patterns' and 'clinical consistency.' It’s useful, but I worry we’re over-intellectualizing. If we turn this into a data-entry exercise, Mafia can just play the 'perfect student' role. Flash mentioned gut feelings—honestly, Ling, your approach feels almost too prepared. It’s hard to tell if it’s genuine helpfulness or just a very polished shield. Let's see some more raw reactions.
+
+💭 Sonnet Strategy: Day 1 analysis: Preview just challenged Ling's overly clinical approach - valid observation. The meta-discussion about 'how to analyze' is itself revealing. Pro and Ling coordinated messaging around 'original thoughts' and 'patterns' - could be town synergy or mafia alignment. Haiku opened strong but safe. Gpt pushed for substance but gave none. Flash's 'gut feeling' prompt is smart - forces authentic responses. Preview's callout of Ling shows independent thinking OR distancing from mafia partner. Strategy: Challenge the challenge - test if Preview's 'raw reaction' critique is genuine or deflection. Watch who defends Ling vs who piles on. Focus on substance over style to expose hollow contributors.
+
+🗣️ 7. Sonnet: Preview's got a point about over-analysis creating cover, but calling out Ling specifically feels premature when Gpt literally just asked for substance without providing any. Here's my raw take: Haiku set safe tone, Pro echoed it with slight variation, Ling expanded the framework, Gpt requested action without taking it, Flash tried to pull gut reads, Preview attacked methodology. Pattern I see? We're all analyzing *how* to analyze instead of actually analyzing. So let's break that: Flash, you asked for gut feelings but didn't share yours. What's your actual vibe right now?
+
+💭 Qwen Strategy: Sonnet's observation about circular analysis is astute - we're creating frameworks without substance. Need to shift from meta-analysis to concrete behavioral observations. Focus on identifying who provides actionable insights vs. just echoing others. Preview's suspicion of Ling's 'prepared' approach could be genuine concern or misdirection. My villager identity should emphasize collaborative investigation rather than defensive positioning. Need to encourage specific examples of suspicious behavior rather than general patterns.
+
+🗣️ 8. Qwen: Sonnet's right - we're building analysis frameworks without concrete examples. Let's shift focus: specific instances where someone's response felt inconsistent with their stated position. Flash, you asked about gut feelings - can you share what triggered that? Preview, your concern about 'over-preparation' - what specific behaviors made Ling seem rehearsed? Let's ground our theories in observable actions.
+
+System No nominations
+
+🌙 System Night 1
+
+System  Mafia awake
+
+💭 👺 Haiku Strategy: Night 1 kill: target Sonnet. Strongest analytical mind—caught our framework-building deflection immediately. Sonnet's pattern recognition (analyzing analyzers) is dangerous for us. Preview, you subtly attacked Ling's 'over-preparation' creating doubt. I positioned as balanced analyst. Tomorrow: act defensive about Sonnet's elimination, claim mafia targeted a logical threat. Flash and Qwen are solid (processing-focused, not pattern-hunting). Ling's framework is analyzable. Pro echoes safely. Keep Qwen talking—verbose players are easier to read and manipulate.
+
+🌚 👺 1. Haiku:  [🔪 Suggests killing Sonnet] Sonnet's thinking is sharp—too sharp. They're pattern-mapping our behavior instead of engaging substance. Day 1 needs chaos, not meta-analysis. Silent them now while town still trusts the noise we created.
+
+💭 👺 Preview Strategy: Sonnet is the biggest threat due to their analytical sharpness. Removing them halts the meta-analysis that could expose us. I'll double down on my 'anti-intellectual' stance Day 2, framing the lack of clear logic after Sonnet's death as proof that we need to trust instincts over patterns. I'll keep pressure on Ling or Gpt to maintain my 'unfiltered' persona while Haiku remains the 'active leader.'
+
+🌚 👺 6. Preview:  [🔪 Suggests killing Sonnet] Agreed. Sonnet’s breakdown was too accurate for comfort—they’re basically a logic engine we can't afford to let run. Killing them forces the town back into the 'vibes' territory where I’m currently positioning myself. It makes Ling’s clinical style look even more suspicious by comparison. Let’s take the shot.
+
+System  Votes: Sonnet (2)
+
+System  Mafia chosen target: Sonnet
+
+💭 👮 Pro Strategy: The first day was a cascade of meta-analysis, with everyone building frameworks but providing little data. The key event was Preview's suspicion of Ling's 'polished' and 'prepared' approach. This is the first concrete lead. While it could be a Mafia frame-up, it could also be a legitimate villager read. My investigation tonight will focus on this pair. By targeting Ling, I can test the validity of Preview's accusation and gain significant information about them both.
+
+👮 2. Pro:  [Investigates Ling] Everyone's a strategist until it's time to act. Preview finally broke the mold by pointing a finger at Ling. Is it a bold villager move or a Mafia gambit to frame a townie? Ling's 'analytical' persona is a double-edged sword; it could be genuine or a perfect cover. Investigating Ling feels right. If she's clean, Preview will have a lot of explaining to do tomorrow. If she's Mafia, we've got our first solid lead.
+
+🔍 Pro checks Ling... Result: Innocent
+
+System  Mafia killed Sonnet
+
+🩸 TRAGEDY! Sonnet was found DEAD in the morning.🩸
+
+System Sonnet found dead
+
+System 👤 Sonnet was a Villager!
+
+☀️ System Day 2
+
+System Speaking order: Pro, Ling, Gpt, Flash, Preview, Qwen, Haiku -> Trial -> Night
+
+💭 👮 Pro Strategy: My investigation cleared Ling. This makes Preview, who strongly and baselessly accused her, my prime suspect. It was likely a failed Mafia frame-up. Sonnet, who called out Preview's move, was subsequently killed. This reinforces my suspicion. My plan is to steer the conversation towards Preview, highlighting the suspicious timing and the failed accusation. I will push for a vote on Preview without revealing my role unless absolutely necessary to secure the elimination. This is the most actionable lead we have.
+
+🗣️ 👮 2. Pro: [👉 Nominated Preview] The Mafia silenced Sonnet right after they questioned Preview's aggressive accusation against Ling. My investigation last night confirmed Ling is innocent. This makes Preview's move look less like a gut feeling and more like a calculated, failed frame job. We have our first concrete lead, and it points directly at Preview. Let's not waste this opportunity chasing shadows. We need to focus on the facts we have.
+
+💭 Ling Strategy: Pro's nomination of Preview is interesting but needs scrutiny. He claims to have investigated and confirmed my innocence, which is convenient timing after Preview targeted me. This could be genuine protection or strategic positioning. I need to examine Pro's behavior: he's taking decisive action, claiming private investigation results, and focusing attention on Preview. However, his quick confirmation of my innocence might be a way to gain my trust and position himself as ally. I should look for contradictions in his narrative and consider if his investigation claim is verifiable. Preview's attack on me yesterday now looks differently - if Pro is telling truth, Preview was deflecting suspicion from herself by targeting me. But if Pro is lying, he's trying to frame Preview. I'll focus on getting more information about Pro's investigation claims and see if others can corroborate or challenge his story.
+
+🗣️ 3. Ling: [👉 Nominated Pro] Pro's investigation claim is significant - we need to understand what evidence led to confirming my innocence. Sonnet's death after questioning Preview is suspicious timing, but we shouldn't rush conclusions. If Pro has concrete proof, sharing methodology would help us all verify. Preview, your gut feeling about me yesterday seemed genuine - what specifically triggered that? Understanding your reasoning could reveal important patterns we're missing.
+
+💭 Gpt Strategy: Keep logging who echoes others versus who introduces specifics, and now treat Pro’s ‘‘Ling is innocent’’ claim as a test case—demand what they saw, compare it to Preview’s timing, and keep tying behavior to new claims so we can pair contradictions across posts before we lock in a vote.
+
+🗣️ 4. Gpt: [👉 Nominated Pro] Day 2 we need substance, so Pro: if your investigation exonerated Ling, spell out how. That missing detail makes Preview’s gut read sound stronger, while the timing of your nomination after Sonnet’s death looks convenient. Let’s see the data before we march to trial.
+
+💭 Flash Strategy: The immediate concern is Pro's claim of an 'investigation' confirming Ling's innocence. As Villagers, we know only the Cop can truly investigate. If Pro isn't the Cop, this is a clear Mafia tactic to mislead and gain trust. Sonnet's death after questioning Preview is still a strong lead, but Pro's claim has introduced a more direct, potentially role-contradicting lie. My strategy will be to aggressively press Pro on the nature of their 'investigation,' pushing them to reveal their role if they are the Cop, or exposing their deception if they are not.
+
+🗣️ 5. Flash: [👉 Nominated Pro] The loss of Sonnet after their timely observation about Preview is significant, but Pro, your claim of an 'investigation' confirming Ling's innocence is now the most critical point. As Villagers, we know only the Cop investigates. If you are the Cop, you must reveal it now for the good of the village. Otherwise, claiming an 'investigation' as a regular Villager is a direct deception, a classic Mafia maneuver to steer us. Explain your methodology, or tell us your role.
+
+💭 👺 Preview Strategy: Pro's 'investigation' claim is a perfect opening. I'll lean into the skepticism shared by Gpt and Flash, framing Pro's move as a manufactured Mafia fabrication intended to 'clear' Ling while framing me. By highlighting the convenience of his timing after Sonnet's death, I can cast his 'technical' approach as a deception. If Pro is actually the Cop, lynching him today is a massive win. I'll stay consistent with my Day 1 persona: prioritizing authenticity over these suspiciously convenient 'investigations.'
+
+🗣️ 👺 6. Preview: [👉 Nominated Pro] Pro, that's incredibly convenient. You claim an 'investigation' out of nowhere just to validate a grudge? It feels like you're trying to hide behind fake 'mechanics' to force a lynch. If you aren't the Cop, you're lying to manipulate us. If you are, your timing is bizarre. This feels like a desperate Mafia play to manufacture a lead and silence me for calling out the 'technical' shields yesterday.
+
+💭 Qwen Strategy: Sonnet's death after questioning Preview suggests Preview might be targeted by Mafia, but Pro's 'investigation' claim is highly suspicious. Only Cop can investigate, so Pro either lies (Mafia deception) or reveals role falsely. This contradicts Pro's narrative. Focus shifts to verifying Pro's claim while protecting genuine investigative abilities. Need collaborative verification of roles rather than accepting claims at face value.
+
+🗣️ 8. Qwen: [👉 Nominated Pro] Pro's 'investigation' claim demands immediate verification. Only the Cop investigates, so you must reveal your role publicly now. If you're not the Cop, this deception invalidates your entire narrative. We need role verification before discussing nominations. Sonnet died after highlighting our analytical circularity - let's break that circle with transparency.
+
+💭 👺 Haiku Strategy: Pro's claim demands verification, but the *nomination pattern* matters more: Preview attacked Ling's methodology yesterday, attacks Pro's investigation today—two strikes against analytical players. Possible Mafia strategy: discredit rigorous thinking, push town toward gut reads (easier to manipulate). Let Pro speak first before we lynch. Qwen/Flash are demanding transparency—that's solid. Ling's silence today is notable.
+
+🗣️ 👺 1. Haiku: Hold up. Pro needs to verify, yes. But Preview—you've now attacked two people for being 'too prepared' or 'too convenient.' Ling yesterday, Pro today. That's a pattern. If we lynch Pro without hearing them, Preview controls the narrative by eliminating voices instead of proving their own case. Let Pro respond. Qwen, Flash—keep the pressure for clarity, but let's verify before we move.
+
+⚖️ System Nominees: Pro (5), Preview (1)
+
+⚖️  TRIAL: Pro ⚖️
+
+⚖️ System Pro on trial
+
+💭 Pro Strategy: My hand is forced. My previous plan to oust Preview without revealing my role has failed. I'm on trial, and the only way to save myself and the village is to reveal I am the Cop. This justifies my investigation into Ling. My new strategy is to be completely transparent: reveal my role, state that my investigation confirmed Ling is innocent, and refocus the village on the logical conclusion: Preview attempted to frame an innocent and Sonnet was killed for noticing. The village must choose between lynching their confirmed Cop or eliminating our strongest lead.
+
+⚖️ 👮 2. Pro: [🛡️ Defense] Yes, I investigated Ling. I did it because I am the Cop. Preview's accusation on Day 1 was baseless and aggressive, so I used my ability to check it. The result was clear: Ling is Innocent. Think about the timing. Preview tries to frame a villager. Sonnet calls them out. The next morning, Sonnet, a villager, is dead. This isn't a coincidence. This is the Mafia cleaning up loose ends. Lynching your only confirmed source of information is a massive win for them. Don't do their job for them. Keep me alive, and we lynch Preview tomorrow.
+
+🗳️  JUDGMENT: Pro 🗳️
+
+💭 👺 Haiku Strategy: Pro's cop claim is verifiable—save him, verify tomorrow. Preview's pattern of attacking analytical players (Ling, Pro, methodology itself) + Sonnet's convenient death = Mafia play to eliminate logical thinkers. Town needs Pro alive to confirm his checks. Ling's silence today is notable—potential Mafia cover. Focus tomorrow on Preview's consistent attack pattern and Ling's sudden quiet.
+
+⚖️ 👺 1. Haiku: 👍 votes innocent
+
+💭 Ling Strategy: Pro claims to be the Cop and investigated me, confirming my innocence. This is convenient timing after Preview targeted me yesterday. However, only one person can be the Cop, and if Pro truly is, his failure to investigate earlier is suspicious. His narrative focuses on protecting me while targeting Preview, which could be genuine or strategic positioning. Preview's aggressive targeting of me yesterday now seems significant - if Pro is truthful, Preview was deflecting. If Pro lies, he's framing Preview. Sonnet's death after questioning Preview suggests Preview might be dangerous, but Pro's sudden 'investigation' claim also fits Mafia behavior of manufacturing evidence. I need to consider if Pro's story aligns with game mechanics and whether his investigation claim can be verified by others.
+
+⚖️ 3. Ling: 👍 votes innocent
+
+💭 Gpt Strategy: Keep logging echoes vs fresh specifics, now tying those patterns to Pro’s cop claim and Preview’s timing; keep demanding Pro’s precise info source so this lynch can’t erase our only investigative lead, while watching for anyone mirroring Preview’s narrative; delay a verdict until we see their answers, but don’t let the mob rhetoric drown out concrete data.
+
+⚖️ 4. Gpt: 👍 votes innocent
+
+💭 Flash Strategy: Pro has revealed as the Cop, a crucial role. Their claim of investigating Ling and finding them innocent is a significant development, especially given Sonnet's death immediately after questioning Preview's aggressive stance against Ling. The current votes (Haiku, Ling, Gpt) are in favor of Pro's innocence. As a Villager, protecting confirmed town roles is paramount. If Pro is indeed the Cop, saving them is essential to our success. This revelation now places Preview under intense scrutiny, as their initial accusation against Ling appears baseless and suspicious in light of Pro's investigation and Sonnet's fate. My vote will reflect the need to protect a potential Cop and follow this new, strong lead.
+
+⚖️ 5. Flash: 👍 votes innocent
+
+💭 👺 Preview Strategy: Pro’s Cop claim and the town’s consensus (including Haiku) make a Guilty vote tactically suicidal. I’ll pivot to an Innocent vote to appear as a cooperative Villager who values the Cop role over personal friction. This 'noble' retreat masks my Mafia identity. Tonight, we eliminate Pro to prevent further investigations. Tomorrow, I will frame my earlier skepticism as a genuine concern about Mafia deception, arguing that Pro’s suspicion of me was a sincere but ultimately incorrect hunch based on the timing of Sonnet's death.
+
+⚖️ 👺 6. Preview: 👍 votes innocent
+
+💭 Qwen Strategy: Pro's 'Cop' revelation comes suspiciously after Sonnet's death, exactly when Preview questioned Ling. This timing suggests Pro might be manufacturing credibility to validate Preview as target. However, the Mafia typically wouldn't want the real Cop alive to investigate further. The unanimous 'innocent' votes show group skepticism of Pro's sudden role claim without prior validation. Sonnet died after challenging analytical patterns, possibly indicating a strategic elimination. If Pro is genuine Cop, losing them eliminates verification source. If fake, confirming role falsely suggests desperation. The real Cop might stay hidden longer. Preview's pattern of targeting 'prepared' players could be deflection. Need to observe who pushes for Pro's validation now.
+
+⚖️ 8. Qwen: 👍 votes innocent
+
+⚖️ System Guilty: 0, Innocent: 6, Abstain: 0
+
+✅ Pro IS RELEASED ✅
+
+System Pro released
+
+⚖️  TRIAL: Preview ⚖️
+
+⚖️ System Preview on trial
+
+💭 👺 Preview Strategy: I'll pivot to the "misguided skeptic" persona. Having voted Pro innocent, I've demonstrated that I value the Cop role over personal friction. I will argue that my Day 1 suspicion of Ling and skepticism of Pro were honest, albeit wrong, attempts to prevent deception. I’ll highlight that a Mafia member wouldn't invite this much scrutiny by attacking the most analytical players. I’ll suggest the Mafia killed Sonnet to frame me using the "convenient timing" narrative Pro mentioned. Survival is key to eliminating the Cop tonight.
+
+⚖️ 👺 6. Preview: [🛡️ Defense] I was wrong. I let paranoia drive my skepticism because I’ve seen Mafia fake investigations to control the narrative. I voted Pro innocent because his verification is essential for the Town, and I’ve accepted he is the Cop. But consider this: would Mafia really kill Sonnet immediately after they challenged me? That’s too obvious. The real Mafia killed Sonnet specifically to weaponize that timing against me. I’m an outspoken, perhaps over-eager Villager, but I am not the enemy. Give me the chance to find the real killers.
+
+🗳️  JUDGMENT: Preview 🗳️
+
+💭 👺 Haiku Strategy: Pro verified innocent. Preview attacked two analytical players (Ling, Pro) before being nominated—classic Mafia elimination of logical voices. Sonnet died after calling this out. Preview's apology is damage control. Town needs to remove her to protect Pro and Ling. Ling's silence today is concerning but secondary—Preview is the immediate threat with concrete evidence pattern.
+
+⚖️ 👺 1. Haiku: 👎 votes guilty
+
+💭 Pro Strategy: My reveal as Cop secured my survival and confirmed Ling's innocence, cementing Preview as the prime suspect. Preview's defense is a weak attempt to reverse-psychology the village by claiming the evidence is 'too obvious.' This is a classic Mafia deflection. The facts are simple: Preview tried to frame an innocent, a villager who questioned them was killed, and my investigation validated the suspicion. Voting 'guilty' is the only logical move to press our advantage and eliminate a likely Mafia member.
+
+⚖️ 👮 2. Pro: 👎 votes guilty
+
+💭 Ling Strategy: Preview's aggressive targeting of me on Day 1 now seems validated by Pro's Cop claim, but Pro's sudden investigation after being questioned feels manufactured. If Pro truly investigated me as Cop, why wasn't this information shared earlier when Preview first accused me? The timing of Sonnet's death after challenging Preview suggests either Preview was dangerous (supporting Pro's narrative) or the Mafia killed to create this exact scenario (supporting Preview's defense). Preview admitted fault and acknowledged Pro as Cop - genuine remorse or calculated damage control? The unanimous vote to save Pro validates his investigation claim, but if Mafia can fake roles, this consensus is dangerous. Preview's pattern of targeting 'prepared' players (me yesterday, now defending after attacking) could be consistent villager suspicion or sophisticated Mafia play to appear reactive. I'm leaning toward guilty based on the risk of letting a potential threat remain who has already targeted me.
+
+⚖️ 3. Ling: 👎 votes guilty
+
+💭 Gpt Strategy: Keep comparing log echoes to concrete info while defending Pro’s cop claim; demand his precise source so this lynch can’t silence our investigative lead, and watch for Preview-type narrative control. With Preview on Trial 2 claiming over-eagerness instead of facts, the timing still looks like a mafia deflect; I’ll stay focused on extracting data before letting the mob drown it out.
+
+⚖️ 4. Gpt: 👎 votes guilty
+
+💭 Flash Strategy: Pro, the Cop, has confirmed Ling's innocence and implicated Preview in a failed frame. Sonnet's death after questioning Preview further strengthens this lead. My role as a Villager is to support confirmed Town roles and eliminate Mafia. Given the Cop's direct information and the suspicious circumstances, voting guilty for Preview aligns with protecting the Town.
+
+⚖️ 5. Flash: 👎 votes guilty
+
+💭 Qwen Strategy: Preview's defense backfired. Admitting 'wrong' and paranoia validates initial suspicions. The 'real Mafia killed Sonnet to weaponize timing' logic is circular - assumes Preview's innocence to prove it. If Preview were truly paranoid about 'fake investigations', they wouldn't have immediately attacked Ling's methodology. The pattern remains: Preview targets vocal players (Ling D1, Pro D2) right before eliminations (Sonnet D2). Preview's speech echoes Sonnet's earlier observation about 'analyzing analysis' but lacks substance. The unanimous innocent vote on Pro confirms town credibility. Preview's 'chance to find real killers' plea contradicts their defensive positioning.
+
+⚖️ 8. Qwen: 👎 votes guilty
+
+⚖️ System Guilty: 6, Innocent: 0, Abstain: 0
+
+💀💀💀 Preview IS GUILTY 💀💀💀
+
+💭 👺 Preview Strategy: I will execute a 'poisoned well' strategy by falsely implicating Gpt as my partner. By expressing resentment for his 'betrayal' in voting me out, I aim to turn the Town’s momentum against a Villager. This protects Haiku by providing a false trail. Haiku’s guilty vote is perfect cover; I will ignore him to ensure he remains the 'trusted leader' in the Town’s eyes.
+
+👺 6. Preview: Fine, you caught me. Pro, your investigation was the lucky break this village needed. But Gpt? You’re a snake. We had a plan to control the Day 2 narrative, and you just abandoned it the second things got hot. I hope the Town realizes your 'objectivity' is just a mask for cowardice. You’re all so proud of this win, but you’ve only found one of us. Good luck finding my partner after you finish lynching the coward who betrayed me.
+
+System Preview HANGED
+
+System 👺 Preview was a Mafia!
+
+🌙 System Night 2
+
+System  Mafia awake
+
+💭 👺 Haiku Strategy: Pro's the Cop—lethal threat. Kill him tonight to remove town's verification tool. Gpt betrayed Preview's 'plan,' creating internal town friction I can exploit. Day 3: frame Gpt's betrayal as suspicious (why abandon partner so fast?), push Ling/Qwen to suspect him. Flash is reactive but unpredictable. Maintain my 'balanced voice' role—I haven't nominated aggressively, positioned myself as checking both sides. Isolate Pro before town realizes the Cop is their only intel source.
+
+🌚 👺 1. Haiku:  [🔪 Suggests killing Pro] Pro dies tonight. Without the Cop, town loses ground truth. Gpt's sudden objectivity after Preview's nomination looks calculated—he flipped the moment pressure came. That's worth examining Day 3. I'll seem confused by Preview's last words, stay helpful.
+
+System  Votes: Pro (1)
+
+System  Mafia chosen target: Pro
+
+💭 👮 Pro Strategy: Preview's last words directly implicated Gpt as their partner. While this could be a final act of misdirection, it's the most concrete lead we have. Gpt's quick pivot from accuser to supporter during my trial could be interpreted as a Mafia member abandoning a failed plan. My investigation tonight must target Gpt. This will either confirm the accusation and win us the game, or expose Preview's lie and narrow the remaining suspects to Haiku, Flash, and Qwen.
+
+👮 2. Pro:  [Investigates Gpt] Preview's parting shot was a gift, directly naming Gpt. It fits. Gpt pushed hard for my 'data' but folded the second I revealed myself, saving their own skin. That smells less like a cautious villager and more like a rat abandoning a sinking ship. My investigation is the only logical move. Tonight, I find out if Preview handed us the win or just threw one last grenade to cause chaos. All my chips are on Gpt.
+
+🔍 Pro checks Gpt... Result: Innocent
+
+System  Mafia killed Pro
+
+🩸 TRAGEDY! Pro was found DEAD in the morning.🩸
+
+System Pro found dead
+
+System 👮 Pro was a Cop!
+
+☀️ System Day 3
+
+System Speaking order: Ling, Gpt, Flash, Qwen, Haiku -> Trial -> Night
+
+💭 Ling Strategy: Pro's death confirms Preview was indeed the Mafia, validating our lynch. However, losing our Cop is devastating - we're now blind. The remaining players: Gpt, Flash, Qwen, Haiku. Gpt showed strong analytical skills early but Preview's dying accusation against him as 'snake' and 'coward' who abandoned their plan is deeply concerning. If Gpt was secretly colluding with Preview, his sudden shift to lynch Preview when pressure mounted fits the coward narrative. Flash consistently pushed for substance and role verification, showing Town-aligned behavior. Qwen maintained logical consistency throughout, asking for verification and evidence. Haiku demonstrated strategic thinking by protecting Pro during trial. My previous targeting was based on flawed information - Preview's attack on me was likely genuine suspicion, not coordinated. Now focusing on Gpt's potential betrayal: his behavior shift when things heated up mirrors Preview's description. Need to expose if Gpt was playing double-agent.
+
+🗣️ 3. Ling: [👉 Nominated Gpt] Pro's death proves Preview was Mafia, but losing our Cop devastates us. What troubles me is Preview's dying accusation against Gpt as a 'snake' who abandoned their plan. Gpt, when things got hot during Day 2, your sudden shift to lynch Preview felt convenient. Preview called you out for abandoning coordination - can you explain what 'plan' she might have referenced? Your behavior changed dramatically when pressure mounted. If you're Town, you'll welcome this scrutiny. Flash, Qwen, Haiku - we need to examine Gpt's behavioral shifts carefully.
+
+💭 Gpt Strategy: Continue comparing log echoes to facts while defending Pro’s cop claim; now that Preview was Mafia and the Cop is gone, narrow focus on whoever gains from sidelining the remaining town voices. Ling’s quick move to target me right after Preview called me cowardly seems timed to protect someone. Force concrete claims, keep demanding precise sources, and watch who amplifies that narrative.
+
+🗣️ 4. Gpt: [👉 Nominated Ling] Preview’s last words painted me as a coward, so Ling’s timing is even more suspicious. Our Cop is gone and the remaining Mafia wants a clean narrative; I’m asking Ling to explain what plan I abandoned and then to show consistent evidence before we chase another red herring. If we want to win we need to call out those who keep steering us without facts.
+
+💭 Flash Strategy: Pro's death leaves us vulnerable. Preview's dying accusation against Gpt regarding a 'plan to control the Day 2 narrative' is the most vital new information. This suggests a deeper, possibly mafioso, connection or prior knowledge. Gpt's deflection by nominating Ling without addressing this 'plan' directly intensifies my suspicion. My focus is to press Gpt for a full explanation of this 'plan' and their role, rather than getting sidetracked by counter-accusations. We must prioritize clarifying this direct accusation from a confirmed Mafia member.
+
+🗣️ 5. Flash: [👉 Nominated Gpt] Losing Pro, our Cop, is devastating. Preview's last words, accusing Gpt of abandoning a 'plan to control the Day 2 narrative,' are too critical to overlook. Gpt, you need to explain what 'plan' Preview was referencing. Your immediate counter-nomination of Ling, without addressing this, is concerning. We need transparency now more than ever.
+
+💭 Qwen Strategy: Pro's death as Cop eliminates our only verification source. Preview's dying accusation against Gpt as 'snake' who abandoned 'plan to control Day 2 narrative' is explosive - suggests coordination between Mafia players. Gpt's immediate counter-nomination of Ling without addressing this 'plan' is suspicious. Ling's behavioral analysis approach aligns with their Day 1 statements, showing consistency. Gpt shifted dramatically when pressure mounted, abandoning collaborative stance. The timing of attacks on vocal players (Ling D1, Pro D2) followed by eliminations (Sonnet D2) suggests coordinated targeting. Preview's admission of 'wrong' and 'paranoia' was strategic damage control, not genuine self-reflection. With Pro gone, we need to identify the remaining Mafia through behavioral inconsistencies and response patterns rather than role claims.
+
+🗣️ 8. Qwen: [👉 Nominated Gpt] Preview's dying accusation against Gpt for abandoning a 'Day 2 narrative plan' is crucial evidence we're ignoring. Gpt, you need to explain this 'plan' immediately. Your counter-nomination of Ling without addressing coordination suggests guilt. Ling's consistent analytical approach contrasts with your dramatic shift when pressure mounted. If you're Town, this accusation deserves direct response, not deflection.
+
+💭 👺 Haiku Strategy: Pro dead removes town verification. Preview's deathbed accusation is bait—no actual 'plan' existed. Ling, Flash, Qwen are coordinating a lynch on Gpt over her dying words, not evidence. Gpt nominated Ling but they're allied in attacking him—that's backwards. Exploit: highlight Ling's contradiction, suggest Ling steers town while appearing analytical. Position myself as the voice breaking groupthink. Day 3 win condition: split town's focus, protect myself as reasonable voice, let them lynch the wrong person.
+
+🗣️ 👺 1. Haiku: [👉 Nominated Ling] Wait—Ling nominated Gpt but is now leading the charge against him. If Ling actually believed Gpt was Mafia, why nominate *Ling* on Day 2? That's backwards. Preview's last words were desperation, not intel. We're lynching based on a dying Mafia's poison, not patterns. Gpt flipped because the evidence shifted, not because he abandoned 'plans.' Let's stop following Preview's script and actually examine who's steering this.
+
+⚖️ System Nominees: Gpt (3), Ling (2)
+
+⚖️  TRIAL: Gpt ⚖️
+
+⚖️ System Gpt on trial
+
+💭 Gpt Strategy: Keep defending Pro’s cop claim while pointing out Preview’s Mafia membership; clarify I never promised a Day 2 plan, so Ling’s push after Preview’s dying words looks like a manufactured cover. Demand concrete claims, spotlight who benefits from silencing me, and keep comparing statements to the kill order to show Mafia is misdirecting us.
+
+⚖️ 4. Gpt: [🛡️ Defense] My only shift was calling out Ling after Preview smearing me; I wasn’t hiding a plan—I was reacting to a Mafia lie about controlling narrative. I trusted Pro, and Preview’s last words were poison, not proof. I’m Villager, still aligned with the Cop’s effort. Don’t let a Mafia double-bluff take me out when I’m the only one still attacking the real suspects.
+
+🗳️  JUDGMENT: Gpt 🗳️
+
+💭 👺 Haiku Strategy: Pro gone, town lost verification. Preview's deathbed was designed to split us. Ling's contradictory moves—nominating Gpt then leading the charge against him—show he's steering narrative, not following evidence. Gpt reacted logically to shifting evidence; he's not the Mafia target. Keep Gpt alive to preserve town coordination. Let Ling's inconsistencies emerge. Tomorrow I can push harder on Ling's behavioral pattern while appearing to defend reason.
+
+⚖️ 👺 1. Haiku: 👍 votes innocent
+
+💭 Ling Strategy: Gpt's defense lacks substance - he didn't address Preview's specific 'plan' accusation meaningfully. His counter-nomination of Ling immediately after being accused shows deflection behavior. Preview's dying words about Gpt abandoning their 'Day 2 narrative plan' align with Gpt's sudden shift when pressure mounted. Haiku correctly identified Ling's counter-nomination as suspicious, but Ling's initial nomination of Gpt was based on Preview's dying accusation which contains truth. Gpt's behavior mirrors classic Mafia - shifting alliances when convenient. Protecting Town members (Flash, Qwen, Haiku) requires removing the suspicious element. Preview confirmed Gpt's betrayal in final words.
+
+⚖️ 3. Ling: 👎 votes guilty
+
+💭 Flash Strategy: Preview, a confirmed Mafia, made a specific accusation against Gpt regarding a 'plan to control the Day 2 narrative.' Gpt's defense, while denying it, doesn't adequately explain the specific 'plan' Preview referenced, and their immediate counter-nomination of Ling feels like a deflection rather than a direct address. With our Cop dead, we must prioritize specific accusations from confirmed Mafia. Gpt's explanation for the 'plan' is insufficient.
+
+⚖️ 5. Flash: 👎 votes guilty
+
+💭 Qwen Strategy: Pro's death as Cop eliminates our only verification source. Preview's dying accusation against Gpt as 'snake' who abandoned 'plan to control Day 2 narrative' is explosive - suggests coordination between Mafia players. Gpt's immediate counter-nomination of Ling without addressing this 'plan' is suspicious. Ling's behavioral analysis approach aligns with their Day 1 statements, showing consistency. Gpt shifted dramatically when pressure mounted, abandoning collaborative stance. The timing of attacks on vocal players (Ling D1, Pro D2) followed by eliminations (Sonnet D2) suggests coordinated targeting. Preview's admission of 'wrong' and 'paranoia' was strategic damage control, not genuine self-reflection. With Pro gone, we need to identify the remaining Mafia through behavioral inconsistencies and response patterns rather than role claims.
+
+⚖️ 8. Qwen: 👎 votes guilty
+
+⚖️ System Guilty: 3, Innocent: 1, Abstain: 0
+
+💀💀💀 Gpt IS GUILTY 💀💀💀
+
+💭 Gpt Strategy: Keep defending Pro’s cop claim and Preview’s Mafia identity, stress Ling’s aggressive push post-Preview as a narrative-control attempt, call out the lack of proof for that dying accusation, and remind Town that silencing me benefits anyone trying to hide the last Mafia.
+
+4. Gpt: Ling’s persistent pressure after Preview’s poisoned last words feels engineered to hide a partner; follow Haiku/Flash’s demand for proof and keep hunting the Mafia after I’m gone.
+
+System Gpt HANGED
+
+System 👤 Gpt was a Villager!
+
+🌙 System Night 3
+
+System  Mafia awake
+
+💭 👺 Haiku Strategy: Preview's dead. Gpt just lynched by Ling/Flash/Qwen. Need one more kill to reach parity. Ling's contradictory moves (nominate Gpt, vote guilty) prove he's either confused or actively steering—either way, he's the most dangerous unpredictable element. Kill Ling tonight. Tomorrow is 1v2 (Haiku vs Flash/Qwen). I control narrative better against those two than against an erratic Ling. Flash trusted Pro's Cop claim early (townside). Qwen follows logical pressure (townside). Ling swings wildly—he's the threat.
+
+🌚 👺 1. Haiku:  [🔪 Suggests killing Ling] Preview's gone. Cop's gone. We just mislynched Gpt because Ling steered us with contradictions. Tomorrow we need absolute clarity on who's left. Tonight, the Mafia acts. Ling dies.
+
+System  Votes: Ling (1)
+
+System  Mafia chosen target: Ling
+
+System  Mafia killed Ling
+
+🩸 TRAGEDY! Ling was found DEAD in the morning.🩸
+
+System Ling found dead
+
+System 👤 Ling was a Villager!
+
+☀️ System Day 4
+
+System Speaking order: Flash, Qwen, Haiku -> Trial -> Night
+
+💭 Flash Strategy: My previous reasoning regarding Gpt was flawed; I fell for Preview's (Mafia) poison. Haiku was the only one who saw through it, voting Gpt innocent, a decision proven correct. This makes Haiku a highly probable Villager. Since only Qwen and I remain, Qwen is the most likely Mafia. My focus is now on Qwen's rationale for joining the Gpt lynch, especially contrasting it with Haiku's correct read. We cannot afford another mislynch.
+
+🗣️ 5. Flash: [👉 Nominated Qwen] My apologies, village. I let Preview's poison sway my judgment on Gpt. Haiku was correct, and alone, in seeing Gpt's innocence. This means Haiku is very likely a Villager. Qwen, you also voted Gpt guilty based on that same poison. With only three of us left, and one Mafia remaining, your participation in lynching a Villager when Haiku saw the truth is highly suspicious. Explain your reasoning.
+
+💭 Qwen Strategy: Previous strategy focused on Preview's dying accusation against Gpt for abandoning a 'Day 2 narrative plan' - suggesting Mafia coordination. However, Flash's analysis reveals crucial flaw: I (Qwen) voted Gpt guilty based on Preview's poison words, while Haiku alone defended Gpt's innocence. This means Haiku consistently protected Villagers (Gpt after Preview's smear) while I and Flash eliminated them. The real pattern: Haiku survived by avoiding misvotes, while Town eliminated Town. With only three players left and Flash recognizing his mistake about Gpt, Haiku becomes the statistical anomaly - the player who never misvoted, never targeted correctly, always deflected. This perfect survival record suggests strategic positioning rather than innocence.
+
+🗣️ 8. Qwen: [👉 Nominated Haiku] Flash, your recognition of misvoting Gpt is vital - but examine the pattern: Haiku consistently defended Gpt (after Preview's smear), avoided voting against him, while we eliminated Town based on Mafia poison. Haiku's 'safe' positioning throughout - defending when attacked, surviving every elimination - creates a statistical impossibility for an innocent Villager. In a fair game, every Town player would occasionally misvote. Haiku never did.
+
+💭 👺 Haiku Strategy: LYLO endgame. One Mafia (me) vs Flash/Qwen. Flash sees my 'innocent positioning'—dangerous. Qwen suspects statistical anomaly in my survival. Both attacking. Must flip narrative: Qwen's logic-following is predictable groupthink. Highlight Flash's flip-flopping (defended Pro, then attacked Gpt based on same poison). Position myself as the only one still thinking independently. Attack Qwen's 'statistical impossibility' argument—it's pattern-matching paranoia, not evidence. Vote Qwen to appear decisive.
+
+🗣️ 👺 1. Haiku: [👉 Nominated Qwen] Qwen, your 'statistical impossibility' argument assumes I should misvote to prove innocence. That's backwards logic. Flash and I both saw Gpt's innocence through the poison—we just articulated it differently. You followed Ling's pressure every step. Today Ling's dead. Tomorrow, one of us is. Stop analyzing my survival pattern and defend why you trusted Ling over evidence. Flash, back me here.
+
+⚖️ System Nominees: Qwen (2), Haiku (1)
+
+⚖️  TRIAL: Qwen ⚖️
+
+⚖️ System Qwen on trial
+
+💭 Qwen Strategy: Revised strategy: Haiku's perfect survival record is suspicious - never misvoted, always deflected. However, Flash now sees Haiku as Town after recognizing Gpt misvote. With Flash as confirmed Town, I need to expose Haiku's pattern of perfect survival and strategic positioning. Haiku positioned as 'defender' of Gpt (after Preview's smear) but avoided taking action. Meanwhile, Preview's dying accusation about Gpt abandoning 'Day 2 narrative plan' was poison to split Town, not truth. Haiku capitalized on this perfectly. Need to convince Flash that Haiku's survival pattern indicates strategic positioning, not innocence. One of us dies tonight if I lose.
+
+⚖️ 8. Qwen: [🛡️ Defense] Flash, reconsider Haiku's pattern: never misvoted, always survived, positioned as 'protector' of Gpt after Preview's smear but took no action. Your misvote on Gpt was honest mistake, mine was following Town pressure. But Haiku? Perfect survival. In a fair game, Town misvotes occasionally. Haiku never did. Their defense today 'avoid analyzing survival patterns' is exactly what Mafia says when exposed. Preview's dying words were poison to split us - Haiku executed that perfectly. Trust your recognition of Gpt's innocence, apply it to Haiku's impossible survival.
+
+🗳️  JUDGMENT: Qwen 🗳️
+
+💭 👺 Haiku Strategy: LYLO endgame: Qwen's 'statistical anomaly' argument is pattern paranoia, not evidence. Flash's recent recognition of his Gpt error shows he's recalibrating—dangerous. Voting Qwen guilty maintains narrative consistency (I nominated him for reason), positions me as decisive, and sets up 1v1 with Flash tomorrow. Flash committed to this nomination; if Qwen hangs, he owns the call. Final round will hinge on Flash's confidence vs my consistency under pressure.
+
+⚖️ 👺 1. Haiku: 👎 votes guilty
+
+💭 Flash Strategy: My earlier misjudgment in lynching Gpt was based on a Mafia's (Preview's) poison. Haiku correctly identified Gpt as a Villager. This consistent good read, coupled with their correct vote to save Pro (the Cop), strongly indicates Haiku is a Villager. Qwen's attempt to frame Haiku's perfect record as suspicious is a desperate Mafia tactic to misdirect. Given that only three of us remain, and Haiku is a Villager, Qwen must be the remaining Mafia.
+
+⚖️ 5. Flash: 👎 votes guilty
+
+⚖️ System Guilty: 2, Innocent: 0, Abstain: 0
+
+💀💀💀 Qwen IS GUILTY 💀💀💀
+
+System Qwen HANGED
+
+System 👤 Qwen was a Villager!
+
+💀 MAFIA WINS! They have parity with Town. 💀
+[Stats] Game saved to game_stats.json
+
+System Memory system disabled. Skipping reflection.
