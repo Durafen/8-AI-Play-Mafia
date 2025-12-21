@@ -33,7 +33,7 @@ class Player:
         villager_count = player_count - 2 # 2 Mafia
         prompt = f"""MAFIA GAME. You: {self.state.name} ({self.state.role}).
 {player_count} players: 2 Mafia, {villager_count} Villagers (1 Cop).
-{'Role revealed on death.' if game_state.reveal_role_on_death else ''}
+{'Role revealed on death. ' if game_state.reveal_role_on_death else ''}Last words before death.
 """
         # Check if partner is alive
         partner_alive = False
